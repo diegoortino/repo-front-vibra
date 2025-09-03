@@ -1,0 +1,68 @@
+/* Login section */
+.login-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4rem;
+  align-items: center;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 4rem 0;
+}
+
+.login-text {
+  animation: fadeInLeft 1s ease-out;
+}
+
+.login-title {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700;
+  font-size: clamp(1.8rem, 4vw, 2.2rem);
+  margin-bottom: 1.5rem;
+  color: #a078ff;
+}
+
+.login-description {
+  font-size: 1.1rem;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.login-form {
+  background: rgba(160, 120, 255, 0.1);
+  padding: 2.5rem;
+  border-radius: 20px;
+  border: 1px solid rgba(160, 120, 255, 0.2);
+  backdrop-filter: blur(10px);
+  animation: fadeInRight 1s ease-out;
+}
+
+.login-button {
+  width: 100%;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  background: linear-gradient(135deg, #a078ff 0%, #c4b2ff 100%);
+  color: #0c0a1a;
+  border: none;
+  border-radius: 12px;
+  padding: 1rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 1rem;
+  box-shadow: 0 4px 15px rgba(160, 120, 255, 0.2);
+}
+
+.login-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(160, 120, 255, 0.3);
+}
+
+.login-button.secondary {
+  background: transparent;
+  color: #a078ff;
+  border: 2px solid #a078ff;
+}
+
+.login-button.secondary:hover {
+  background: rgba(160, 120, 255, 0.1);
+}
