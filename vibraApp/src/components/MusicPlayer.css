@@ -21,8 +21,6 @@ body {
   right: 0;
   bottom: 0;
 
-  background: rgba(0, 0, 0, 0.9);
-
   height: var(--player-height);
   z-index: var(--player-z);
 
@@ -32,6 +30,7 @@ body {
 
   padding: 0 var(--player-padding-x);
   gap: var(--player-gap);
+  border-top: 1px solid rgb(60, 60, 60);
 
   /* sin colores: el usuario define estética */
   /* background, border, shadow a tu gusto */
@@ -74,8 +73,7 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: #a078ff;
-  text-shadow: 0 0 8px hsla(260, 100%, 66%, 0.4), 0 0 16px hsl(260, 100%, 66%, 0.4), 0 0 32px hsl(263, 100%, 73%, 0.3);
+  color: white;
 }
 
 /* ====== Zona central ====== */
@@ -102,8 +100,7 @@ body {
   border-radius: 50%;
   cursor: pointer;
   user-select: none;
-  color: #a078ff;
-  text-shadow: 0 0 8px hsla(260, 100%, 66%, 0.4), 0 0 16px hsl(260, 100%, 66%, 0.4), 0 0 32px hsl(263, 100%, 73%, 0.3);
+  color: white;
 }
 
 .progressBarContainer{
@@ -116,7 +113,7 @@ body {
 }
 
 .currentTime{
-  color: #a078ff;
+  color: white;
   white-space: nowrap;
 }
 
