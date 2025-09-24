@@ -1,9 +1,11 @@
 /* ====== Layout base ====== */
 :root{
-  --player-height: 88px;     /* alto de la barra */
-  --player-padding-x: 16px;  /* padding horizontal interno */
-  --player-gap: 12px;        /* separación entre grupos */
-  --player-z: 50;            /* nivel sobre el contenido */
+  --player-height: 100px;     /* incrementado para acomodar progreso debajo */
+  --player-padding-x: 20px;   /* más padding para mejor espaciado */
+  --player-gap: 16px;         /* gap más generoso */
+  --player-z: 50;             /* nivel sobre el contenido */
+  --sidebar-width-mobile: 0px;
+  --sidebar-width-desktop: 60px;
 }
 
 /* Evita que el contenido quede oculto detrás del player fijo */
@@ -15,176 +17,334 @@ body {
 }
 
 /* Contenedor principal de la barra */
-.musicPlayerMainContainer{
+.MusicPlayer__MainContainer{
   position: fixed;
-  left: 0;
+  left: var(--sidebar-width-mobile);
   right: 0;
   bottom: 0;
+  width: calc(100% - var(--sidebar-width-mobile));
 
   height: var(--player-height);
   z-index: var(--player-z);
 
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) minmax(320px, 2fr) minmax(220px, 1fr);
+  grid-template-columns: minmax(200px, 1fr) minmax(280px, 1.5fr) minmax(160px, 0.8fr);
+  grid-template-rows: 1fr auto;
   align-items: center;
 
-  padding: 0 var(--player-padding-x);
+  padding: 16px var(--player-padding-x) 12px;
   gap: var(--player-gap);
-  border-top: 1px solid rgb(60, 60, 60);
-
-  /* sin colores: el usuario define estética */
-  /* background, border, shadow a tu gusto */
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  background-color: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
 }
 
-/* Zonas: izquierda (arte + info), centro (controles + progreso), derecha (volumen, etc.) */
-.musicPlayerLeftNav,
-.musicPlayerCenterNav,
-.musicPlayerRightNav{
+/* Zonas principales */
+.MusicPlayer__LeftNav,
+.MusicPlayer__CenterNav,
+.MusicPlayer__RightNav{
   display: flex;
   align-items: center;
   flex-direction: row;
-  min-width: 0; /* permite truncar texto correctamente */
+  min-width: 0;
+  grid-row: 1;
 }
 
 /* ====== Zona izquierda ====== */
-.musicPlayerLeftNav{
+.MusicPlayer__LeftNav{
   justify-content: flex-start;
-  gap: 12px;
+  gap: 16px;
 }
 
-.albumArtContainer{
-  flex: 0 0 56px;          /* cuadrado fijo para carátula */
-  height: 56px;
-  border-radius: 6px;
+/* Contenedor para la miniatura */
+.MusicPlayer__albumArtContainer {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
   overflow: hidden;
-  background: transparent; /* estética después */
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  background: rgba(255,255,255,0.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.trackInfoContainer{
+/* Imagen de miniatura */
+.MusicPlayer__albumArtImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.MusicPlayer__trackInfoContainer{
   min-width: 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 2px;
+  gap: 4px;
 }
 
-.trackTitle,
-.artistName{
+.MusicPlayer__trackTitle{
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   color: white;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.MusicPlayer__artistName{
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  font-weight: 400;
 }
 
 /* ====== Zona central ====== */
-.musicPlayerCenterNav{
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-width: 0;
-}
-
-.musicControlsContainer{
-  display: flex;
+.MusicPlayer__CenterNav{
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 12px;
-}
-
-.controlButton{
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  cursor: pointer;
-  user-select: none;
-  color: white;
-}
-
-.progressBarContainer{
-  width: auto;
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  column-gap: 10px;
   min-width: 0;
 }
 
-.currentTime{
+.MusicPlayer__musicControlsContainer{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
+.MusicPlayer__button_backTrack,
+.MusicPlayer__button_playStop,
+.MusicPlayer__button_nextTrack{
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  cursor: pointer;
+  user-select: none;
+  color: white;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid transparent;
+}
+
+.MusicPlayer__button_backTrack,
+.MusicPlayer__button_nextTrack {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 16px;
+}
+
+.MusicPlayer__button_playStop {
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #000;
+  font-size: 18px;
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+}
+
+.MusicPlayer__button_backTrack:hover,
+.MusicPlayer__button_nextTrack:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.MusicPlayer__button_playStop:hover {
+  background: white;
+  transform: scale(1.05);
+  box-shadow: 0 6px 16px rgba(255, 255, 255, 0.3);
+}
+
+/* Contenedor de progreso - ahora ocupa toda la zona central por debajo */
+.MusicPlayer__progressBarContainer {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  grid-column: 1 / -1; /* ocupa todas las columnas */
+  grid-row: 2;
+  margin-top: 4px;
+}
+
+.MusicPlayer__time {
+  min-width: 48px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Pista y relleno */
+.MusicPlayer__progressTrack {
+  position: relative;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.15);
+  cursor: pointer;
+  overflow: hidden;
+  transition: height 0.2s ease;
+}
+
+.MusicPlayer__progressTrack:hover {
+  height: 6px;
+}
+
+.MusicPlayer__progressFill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0%;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #d06bff 0%, #8b5cf6 100%);
+  transition: width 0.1s linear;
+}
+
+.MusicPlayer__currentTime{
   color: white;
   white-space: nowrap;
 }
 
-/* Un “rulo” para que puedas poner una barra real adentro más tarde */
-.progressBarContainer::before{
-  content: "";
-  height: 4px;
-  border-radius: 999px;
-  /* ocupa la pista de progreso */
-  grid-column: 2 / 3;
-  width: 100%;
-  display: block;
-  /* sin color: lo definís luego */
-}
-
 /* ====== Zona derecha ====== */
-.musicPlayerRightNav{
+.MusicPlayer__RightNav{
   justify-content: flex-end;
   gap: 12px;
 }
 
-.volumeControl,
-.playlistControl,
-.iaImagesControl{
+.MusicPlayer__volumeControl,
+.MusicPlayer__playlistControl,
+.MusicPlayer__iaImagesControl{
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
   cursor: pointer;
   user-select: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.MusicPlayer__volumeControl:hover,
+.MusicPlayer__playlistControl:hover,
+.MusicPlayer__iaImagesControl:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 /* ====== Responsivo ====== */
-/* Tablets: reducimos mínimos y compresión suave */
-@media (max-width: 1024px){
-  .musicPlayerMainContainer{
-    grid-template-columns: minmax(180px, 1.2fr) minmax(260px, 2fr) minmax(160px, 1fr);
+/* Desktop: ajustar para sidebar */
+@media (min-width: 550px) {
+  :root {
+    --sidebar-width-mobile: var(--sidebar-width-desktop);
   }
-  .albumArtContainer{ flex-basis: 48px; height: 48px; }
-  .controlButton{ width: 32px; height: 32px; }
+  
+  .MusicPlayer__MainContainer {
+    left: var(--sidebar-width-desktop);
+    width: calc(100% - var(--sidebar-width-desktop));
+    grid-template-columns: minmax(220px, 1fr) minmax(320px, 1.8fr) minmax(180px, 0.9fr);
+  }
+  
+  .MusicPlayer__albumArtContainer { 
+    width: 72px; 
+    height: 72px; 
+  }
+  
+  .MusicPlayer__trackTitle {
+    font-size: 16px;
+  }
+  
+  .MusicPlayer__artistName {
+    font-size: 14px;
+  }
 }
 
-/* Móviles apaisado / pantallas chicas: priorizamos controles y comprimimos laterales */
-@media (max-width: 768px){
-  :root{ --player-height: 76px; }
+/* Tablets: reducimos mínimos y compresión suave */
+@media (max-width: 1024px) and (min-width: 550px) {
+  .MusicPlayer__MainContainer {
+    grid-template-columns: minmax(180px, 1.1fr) minmax(280px, 1.6fr) minmax(140px, 0.8fr);
+  }
+  .MusicPlayer__button_backTrack,
+  .MusicPlayer__button_nextTrack { width: 36px; height: 36px; }
+  .MusicPlayer__button_playStop { width: 44px; height: 44px; }
+}
+
+/* Móviles: layout compacto */
+@media (max-width: 549px){
+  :root{ 
+    --player-height: 88px; 
+    --sidebar-width-mobile: 0px;
+  }
   body{ padding-bottom: var(--player-height); }
 
-  .musicPlayerMainContainer{
-    grid-template-columns: 1fr 1.4fr 1fr;
-    gap: 8px;
+  .MusicPlayer__MainContainer {
+    left: 0;
+    width: 100%;
+    grid-template-columns: 1fr 1.6fr 1fr;
+    gap: 12px;
+    padding: 12px 16px 8px;
   }
 
-  .musicPlayerLeftNav .trackInfoContainer{ display: none; } /* deja solo la carátula para ahorrar espacio */
-  .albumArtContainer{ flex-basis: 44px; height: 44px; }
-
-  .musicControlsContainer{ gap: 10px; }
-  .controlButton{ width: 30px; height: 30px; }
-
-  .progressBarContainer{
-    max-width: 100%;
-    column-gap: 8px;
+  .MusicPlayer__LeftNav .MusicPlayer__trackInfoContainer { 
+    display: none; 
   }
-
-  .musicPlayerRightNav{
+  
+  .MusicPlayer__albumArtContainer { 
+    width: 52px; 
+    height: 52px; 
+    border-radius: 8px;
+  }
+  
+  .MusicPlayer__musicControlsContainer {
+    gap: 16px;
+  }
+  
+  .MusicPlayer__button_backTrack,
+  .MusicPlayer__button_nextTrack { 
+    width: 36px; 
+    height: 36px; 
+    font-size: 14px;
+  }
+  
+  .MusicPlayer__button_playStop { 
+    width: 42px; 
+    height: 42px; 
+    font-size: 16px;
+  }
+  
+  .MusicPlayer__progressBarContainer {
     gap: 8px;
+  }
+  
+  .MusicPlayer__time {
+    font-size: 11px;
+    min-width: 40px;
   }
 }
 
-/* Extra-chico: ocultamos algunos controles secundarios si hace falta */
-@media (max-width: 420px){
-  .playlistControl{ display: none; }
-  .iaImagesControl{ display: none; }
+@media (max-width: 420px) {
+  .MusicPlayer__playlistControl,
+  .MusicPlayer__iaImagesControl { 
+    display: none; 
+  }
+  
+  .MusicPlayer__MainContainer {
+    gap: 8px;
+    padding: 12px 12px 8px;
+  }
 }
