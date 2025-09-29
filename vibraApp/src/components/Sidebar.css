@@ -6,6 +6,7 @@
     width: 100%;
     display: flex;
     justify-content: center;
+    text-align: center;
     align-items: center;
     border-right: 1px solid rgb(60, 60, 60);
     
@@ -39,13 +40,6 @@
 .navItem p{
     margin: 0px;
 }
-.sideBarContainer .account{
-    display: none;
-    width: 40px;
-    height: 40px;
-    border-radius: 100%;
-    background-color: rgb(90, 65, 65);
-}
 
 @media (min-width:550px) {
     .sideBarContainer{
@@ -61,10 +55,5 @@
         flex-direction: column;
         align-items: center;
         gap: 5px;
-    }
-    .sideBarContainer .account {
-        display: block;
-        margin-top: auto; /* Empuja el account al final */
-        margin-bottom: 40px; /* Sin margen extra abajo */
     }
 }

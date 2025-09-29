@@ -1,0 +1,470 @@
+/* Favorites.css */
+.suggestionsContainer {
+  width: 90%;
+  max-width: 1400px;
+  margin-left: 60px;
+  padding: 40px 20px 100px;
+  color: white;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+/* Header */
+.suggestionsHeader {
+  margin-bottom: 40px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.suggestionsTitle {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin: 0 0 10px 0;
+  color: white;
+  text-align: start;
+  letter-spacing: -0.5px;
+}
+
+.suggestionsSubtitle {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0;
+  text-align: start;
+  font-weight: 500;
+}
+
+/* Sección de Playlists */
+.section {
+  margin-bottom: 50px;
+}
+
+.sectionTitle {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin: 0 0 24px 0;
+  color: white;
+  text-align: start;
+  letter-spacing: -0.3px;
+}
+
+.itemsGrid {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 16px;
+  margin-bottom: 40px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(124, 58, 237, 0.4) rgba(255, 255, 255, 0.05);
+}
+
+.itemsGrid::-webkit-scrollbar {
+  height: 6px;
+}
+
+.itemsGrid::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+}
+
+.itemsGrid::-webkit-scrollbar-thumb {
+  background: rgba(124, 58, 237, 0.4);
+  border-radius: 10px;
+}
+
+.itemsGrid::-webkit-scrollbar-thumb:hover {
+  background: rgba(124, 58, 237, 0.6);
+}
+
+.itemsGrid > div {
+  flex: 0 0 150px;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.itemCover {
+  width: 100%;
+  height: 150px;
+  background: #5b21b6;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.itemCover:hover {
+  background: #6d28d9;
+  transform: translateY(-2px);
+}
+
+.itemName {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.95);
+  margin: 0;
+  text-align: left;
+  width: 100%;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Grid de sugerencias */
+.suggestionsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 24px;
+}
+
+.suggestionCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.suggestionCard:hover {
+  transform: translateY(-4px);
+}
+
+.cardCover {
+  width: 100%;
+  position: relative;
+}
+
+.artistCover, .songCover {
+  width: 100%;
+  height: 160px;
+  background: #5b21b6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.songCover {
+  border-radius: 8px;
+}
+
+.artistCover {
+  border-radius: 50%;
+}
+
+.suggestionCard:hover .artistCover,
+.suggestionCard:hover .songCover {
+  background: #6d28d9;
+}
+
+.coverIcon {
+  font-size: 2.5rem;
+  color: rgba(255, 255, 255, 0.4);
+  transition: transform 0.2s ease;
+}
+
+.suggestionCard:hover .coverIcon {
+  transform: scale(1.08);
+}
+
+.cardContent {
+  width: 100%;
+  text-align: center;
+}
+
+.cardTitle {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+  margin: 0 0 4px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardSubtitle {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0 0 12px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 400;
+}
+
+.cardFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding-top: 8px;
+  gap: 8px;
+}
+
+.cardStats {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  text-align: left;
+}
+
+.likeButton {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 4px;
+  flex-shrink: 0;
+}
+
+.likeButton:hover {
+  color: #f56565;
+  transform: scale(1.15);
+}
+
+.likeButton:active {
+  transform: scale(0.95);
+}
+
+/* Tablets grandes */
+@media (max-width: 1024px) {
+  .suggestionsContainer {
+    width: 92%;
+    padding: 32px 20px 100px;
+  }
+
+  .suggestionsGrid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 20px;
+  }
+
+  .itemsGrid > div {
+    flex: 0 0 140px;
+  }
+
+  .itemCover {
+    height: 140px;
+  }
+
+  .artistCover, .songCover {
+    height: 150px;
+  }
+}
+
+/* Tablets */
+@media (max-width: 768px) {
+  .suggestionsContainer {
+    width: 94%;
+    padding: 24px 16px 100px;
+  }
+
+  .suggestionsTitle {
+    font-size: 2rem;
+    text-align: center;
+  }
+
+  .suggestionsSubtitle {
+    text-align: center;
+  }
+
+  .suggestionsHeader {
+    text-align: center;
+  }
+
+  .sectionTitle {
+    font-size: 2rem;
+    text-align: center;
+  }
+
+  .suggestionsGrid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 16px;
+  }
+
+  .itemsGrid {
+    gap: 12px;
+  }
+
+  .itemsGrid > div {
+    flex: 0 0 130px;
+  }
+
+  .itemCover {
+    height: 130px;
+  }
+
+  .artistCover, .songCover {
+    height: 130px;
+  }
+
+  .coverIcon {
+    font-size: 2rem;
+  }
+
+}
+
+/* Mobile grande */
+@media (max-width: 640px) {
+  .suggestionsContainer {
+    width: 100%;
+    padding: 20px 16px 100px;
+  }
+
+  .suggestionsTitle {
+    font-size: 1.8rem;
+  }
+
+  .sectionTitle {
+    font-size: 1.8rem;
+  }
+
+  .suggestionsGrid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 14px;
+  }
+
+  .itemsGrid > div {
+    flex: 0 0 120px;
+  }
+
+  .itemCover {
+    height: 120px;
+  }
+
+  .artistCover, .songCover {
+    height: 120px;
+  }
+
+  .coverIcon {
+    font-size: 1.8rem;
+  }
+}
+
+/* Margin de la sidebar*/
+@media (max-width: 550px) {
+    .suggestionsContainer{
+        margin-left: 0;
+    }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+  .suggestionsContainer {
+    padding: 16px 12px 100px;
+  }
+
+  .suggestionsTitle {
+    font-size: 1.6rem;
+  }
+
+  .suggestionsSubtitle {
+    font-size: 0.9rem;
+  }
+
+  .sectionTitle {
+    font-size: 1.6rem;
+  }
+
+  .suggestionsGrid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 12px;
+  }
+
+  .itemsGrid {
+    gap: 10px;
+  }
+
+  .itemsGrid > div {
+    flex: 0 0 110px;
+  }
+
+  .itemCover {
+    height: 110px;
+  }
+
+  .artistCover, .songCover {
+    height: 110px;
+  }
+
+  .coverIcon {
+    font-size: 1.6rem;
+  }
+
+  .cardTitle {
+    font-size: 0.85rem;
+  }
+
+  .cardSubtitle {
+    font-size: 0.75rem;
+  }
+
+  .cardStats {
+    font-size: 0.7rem;
+  }
+
+  .likeButton {
+    font-size: 0.9rem;
+  }
+}
+
+/* Mobile muy pequeño */
+@media (max-width: 360px) {
+  .suggestionsContainer {
+    padding: 14px 10px 100px;
+  }
+
+  .suggestionsTitle {
+    font-size: 1.1rem;
+  }
+
+  .sectionTitle {
+    font-size: 1.1rem;
+  }
+
+  .suggestionsGrid {
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 10px;
+  }
+
+  .itemsGrid > div {
+    flex: 0 0 100px;
+  }
+
+  .itemCover {
+    height: 100px;
+  }
+
+  .artistCover, .songCover {
+    height: 100px;
+  }
+
+  .coverIcon {
+    font-size: 1.5rem;
+  }
+
+  .cardTitle {
+    font-size: 0.8rem;
+  }
+
+  .cardSubtitle {
+    font-size: 0.7rem;
+  }
+
+  .cardStats {
+    font-size: 0.65rem;
+  }
+}
