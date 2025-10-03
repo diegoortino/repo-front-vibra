@@ -41,7 +41,7 @@ export function Sidebar(){
                         </div>
                     )}
                 </NavLink>
-                <NavLink to={"/subscriptions"}>
+                <NavLink to={"/follows"}>
                     {({ isActive }) => (
                         <div className='navItem'>
                             <FontAwesomeIcon icon={isActive ? faBellSolid : faBellRegular} />
