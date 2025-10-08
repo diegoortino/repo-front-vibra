@@ -1,8 +1,12 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMusic, faUser, faHeart } from '@fortawesome/free-solid-svg-icons';
 import './Favorites.css';
+import { useState } from 'react';
+import { FavoriteSkeleton } from './FavoriteSkeleton';
 
 export function Favorites() {
+  const [isLoading, setIsLoading]=useState<Boolean>(false) //false mientras conectamos front y back
+
   const suggestions = [
     { type: 'song', name: 'Summer Vibes', artist: 'DJ Sunset', plays: '2.3M' },
     { type: 'song', name: 'Midnight Dreams', artist: 'Luna Park', plays: '1.8M' },
@@ -20,60 +24,66 @@ export function Favorites() {
 
   return (
     <div className="suggestionsContainer">
+      {isLoading?(
+        <FavoriteSkeleton/>
+      ):(
+        <div>
+          {/* Playlists */}
+          <div className="section">
+            <h3 className="sectionTitle">Playlists</h3>
+            <div className="itemsGrid">
+              {[...Array(10)].map((_, index) => (
+                <div key={index} className="item">
+                  <div className="itemCover">Portada</div>
+                  <p className="itemName">Nombre</p>
+                </div>
+              ))}
+            </div>
+          </div>
 
-        {/* Playlists */}
-        <div className="section">
-          <h3 className="sectionTitle">Playlists</h3>
-          <div className="itemsGrid">
-            {[...Array(10)].map((_, index) => (
-              <div key={index} className="item">
-                <div className="itemCover">Portada</div>
-                <p className="itemName">Nombre</p>
+
+          <div className="suggestionsHeader">
+            <h2 className="suggestionsTitle">Descubre Nueva Música</h2>
+            <p className="suggestionsSubtitle">Recomendaciones personalizadas para ti</p>
+          </div>
+
+          <div className="suggestionsGrid">
+            {suggestions.map((item, index) => (
+              <div key={index} className="suggestionCard">
+                <div className="cardCover">
+                  {item.type === 'artist' ? (
+                    <div className="artistCover">
+                      <FontAwesomeIcon icon={faUser} className="coverIcon" />
+                    </div>
+                  ) : (
+                    <div className="songCover">
+                      <FontAwesomeIcon icon={faMusic} className="coverIcon" />
+                    </div>
+                  )}
+                </div>
+
+                <div className="cardContent">
+                  <h4 className="cardTitle">{item.name}</h4>
+                  <p className="cardSubtitle">
+                    {item.type === 'artist' ? item.genre : item.artist}
+                  </p>
+                  <div className="cardFooter">
+                    <span className="cardStats">
+                      {item.type === 'artist' 
+                        ? `${item.followers} seguidores` 
+                        : `${item.plays} reproducciones`}
+                    </span>
+                    <button className="likeButton">
+                      <FontAwesomeIcon icon={faHeart} />
+                    </button>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
+
         </div>
-
-
-      <div className="suggestionsHeader">
-        <h2 className="suggestionsTitle">Descubre Nueva Música</h2>
-        <p className="suggestionsSubtitle">Recomendaciones personalizadas para ti</p>
-      </div>
-
-      <div className="suggestionsGrid">
-        {suggestions.map((item, index) => (
-          <div key={index} className="suggestionCard">
-            <div className="cardCover">
-              {item.type === 'artist' ? (
-                <div className="artistCover">
-                  <FontAwesomeIcon icon={faUser} className="coverIcon" />
-                </div>
-              ) : (
-                <div className="songCover">
-                  <FontAwesomeIcon icon={faMusic} className="coverIcon" />
-                </div>
-              )}
-            </div>
-
-            <div className="cardContent">
-              <h4 className="cardTitle">{item.name}</h4>
-              <p className="cardSubtitle">
-                {item.type === 'artist' ? item.genre : item.artist}
-              </p>
-              <div className="cardFooter">
-                <span className="cardStats">
-                  {item.type === 'artist' 
-                    ? `${item.followers} seguidores` 
-                    : `${item.plays} reproducciones`}
-                </span>
-                <button className="likeButton">
-                  <FontAwesomeIcon icon={faHeart} />
-                </button>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+      )}
 
     </div>
   );
