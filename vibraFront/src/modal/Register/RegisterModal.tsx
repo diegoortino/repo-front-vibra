@@ -1,3 +1,4 @@
+import { GoogleLogin, type CredentialResponse } from '@react-oauth/google';
 import './RegisterModal.css';
 
 type Props = {
@@ -8,6 +9,35 @@ type Props = {
 
 export function RegisterModal({ isOpen, onClose,onOpenLogin }: Props) {
     if (!isOpen) return null
+
+        const handleSuccess = async(credentialResponse: CredentialResponse) => {
+            console.log('Logeado :thumbUp:');
+    
+            const googleToken =credentialResponse.credential
+    
+            const response = await fetch('', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    token: googleToken
+                })
+            });
+    
+            if (!response.ok) {
+                throw new Error('Error en la autenticación');
+            }
+    
+            const data= await response.json()
+            console.log("respuesta del back" + data)
+    
+            //redireccion
+            //window.location.href="Otro Dominio"
+        };
+        const handleError = () => {
+            console.log('Login Failed');
+        };
     return (
         <div className="overlay" onClick={onClose}>
             <div className="modal-content" onClick={e=>e.stopPropagation()}>
@@ -26,7 +56,10 @@ export function RegisterModal({ isOpen, onClose,onOpenLogin }: Props) {
                     <p>O continuar con</p>
                     <div className='loginModal-lineas'></div>
                 </div>
-                <button>Iniciar con Google</button>
+                <GoogleLogin
+                    onSuccess={handleSuccess}
+                    onError={handleError}
+                />
             </div>
         </div>
     );
