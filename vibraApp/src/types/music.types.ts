@@ -18,7 +18,7 @@ export interface Song {
   genre?: string;                // Género musical (opcional)
   viewCount?: number;            // Número de reproducciones (opcional)
   publishedAt?: string | Date;  // Fecha de publicación (opcional)
-  audioPath?: string;            // Ruta del archivo MP3 (opcional)
+  cloudinaryUrl?: string;        // URL del audio en Cloudinary
   createdAt?: string | Date;     // Fecha de creación en BD
   updatedAt?: string | Date;     // Fecha de última actualización
 }
@@ -69,7 +69,8 @@ export interface CreateSongDto {
   genre?: string;                // Género (opcional)
   viewCount?: number;            // Vistas (opcional)
   publishedAt?: Date | string;   // Fecha publicación (opcional)
-  audioPath?: string;            // Ruta del MP3 (opcional)
+  audioPath?: string;            // Ruta del MP3 local (opcional, DEPRECATED)
+  cloudinaryUrl?: string;        // URL del audio en Cloudinary (opcional)
 }
 
 /**
@@ -85,6 +86,7 @@ export interface UpdateSongDto {
   viewCount?: number;
   publishedAt?: Date | string;
   audioPath?: string;
+  cloudinaryUrl?: string;
 }
 
 /**

@@ -1,5 +1,5 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faMusic, faHeart, faPlay } from '@fortawesome/free-solid-svg-icons';
+import { faHeart, faPlay } from '@fortawesome/free-solid-svg-icons';
 import './Favorites.css';
 import { useEffect } from 'react';
 import { FavoriteSkeleton } from './FavoriteSkeleton';
@@ -12,7 +12,7 @@ export function Favorites() {
   const { songs, loading, error, fetchSongs } = useMusic();
 
   // Context para reproducir canciones
-  const { playSong } = useMusicContext();
+  const { playSong, loadSong } = useMusicContext();
 
   // Cargar canciones cuando el componente se monta
   useEffect(() => {
@@ -20,22 +20,22 @@ export function Favorites() {
     fetchSongs(24, 0);
   }, []);
 
-  // Log detallado de canciones cargadas para debug
+  // Cargar la primera canción en el reproductor cuando se cargan las canciones
   useEffect(() => {
     if (songs.length > 0) {
-      console.log('🎵 ===== CANCIONES CARGADAS =====');
-      console.log(`Total: ${songs.length} canciones\n`);
+      // Solo cargar la primera canción en el reproductor, sin reproducir
+      const firstSong = songs[0];
+      console.log('📀 Cargando primera canción en el reproductor:', firstSong.title);
+      console.log('   Artista:', firstSong.artist);
+      console.log('   YouTube ID:', firstSong.youtubeId);
+      loadSong(firstSong, songs);
+    }
+  }, [songs, loadSong]);
 
-      songs.forEach((song, index) => {
-        console.log(`${index + 1}. "${song.title}" - ${song.artist}`);
-        console.log(`   YouTube ID: ${song.youtubeId}`);
-        console.log(`   Duración: ${song.duration}s (${Math.floor(song.duration / 60)}:${String(song.duration % 60).padStart(2, '0')})`);
-        console.log(`   Género: ${song.genre || 'Sin género'}`);
-        console.log(`   URL: https://www.youtube.com/watch?v=${song.youtubeId}`);
-        console.log('');
-      });
-
-      console.log('================================\n');
+  // Log de canciones cargadas para debug
+  useEffect(() => {
+    if (songs.length > 0) {
+      console.log(`🎵 ${songs.length} canciones cargadas - Géneros únicos:`, songs.map(s => s.genre).join(', '));
     }
   }, [songs]);
 
@@ -89,8 +89,11 @@ export function Favorites() {
               style={{ cursor: 'pointer' }}
             >
               <div className="cardCover">
-                <div className="songCover">
-                  <FontAwesomeIcon icon={faMusic} className="coverIcon" />
+                <div className="songCover" style={{
+                  backgroundImage: `url(https://img.youtube.com/vi/${song.youtubeId}/mqdefault.jpg)`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center'
+                }}>
                   <div className="playOverlay">
                     <FontAwesomeIcon icon={faPlay} />
                   </div>

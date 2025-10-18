@@ -16,9 +16,9 @@ import {
   useContext,
   useState,
   useCallback,
-  ReactNode,
   useMemo,
 } from 'react';
+import type { ReactNode } from 'react';
 import type { Song } from '../types';
 
 /**
@@ -32,10 +32,10 @@ interface MusicContextType {
   isPlaying: boolean;
   volume: number;
   isShuffle: boolean;
-  isRepeat: boolean;
 
   // Acciones de reproducción
   playSong: (song: Song, playlist?: Song[]) => void;
+  loadSong: (song: Song, playlist?: Song[]) => void;
   pauseSong: () => void;
   togglePlayPause: () => void;
   nextSong: () => void;
@@ -51,12 +51,6 @@ interface MusicContextType {
   // Acciones de configuración
   setVolume: (volume: number) => void;
   toggleShuffle: () => void;
-  toggleRepeat: () => void;
-
-  // Utilidades
-  getCurrentTime: () => number;
-  getDuration: () => number;
-  setCurrentTime: (time: number) => void;
 }
 
 /**
@@ -91,11 +85,34 @@ export function MusicProvider({ children }: MusicProviderProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolumeState] = useState(80); // 0-100
   const [isShuffle, setIsShuffle] = useState(false);
-  const [isRepeat, setIsRepeat] = useState(false);
 
-  // Estado interno para tiempo (opcional, según implementación del player)
-  const [currentTime, setCurrentTimeState] = useState(0);
-  const [duration, setDurationState] = useState(0);
+  /**
+   * Cargar una canción sin reproducirla (solo mostrar info y miniatura)
+   */
+  const loadSong = useCallback(
+    (song: Song, newPlaylist?: Song[]) => {
+      setCurrentSong(song);
+      setIsPlaying(false); // NO reproducir automáticamente
+
+      // Si se proporciona una nueva playlist
+      if (newPlaylist) {
+        setPlaylistState(newPlaylist);
+        const index = newPlaylist.findIndex((s) => s.id === song.id);
+        setCurrentIndex(index >= 0 ? index : 0);
+      } else if (playlist.length > 0) {
+        // Si ya hay playlist, buscar el índice de la canción
+        const index = playlist.findIndex((s) => s.id === song.id);
+        setCurrentIndex(index >= 0 ? index : 0);
+      } else {
+        // Si no hay playlist, crear una con solo esta canción
+        setPlaylistState([song]);
+        setCurrentIndex(0);
+      }
+
+      console.log('📀 Canción cargada (sin reproducir):', song.title, 'por', song.artist);
+    },
+    [playlist]
+  );
 
   /**
    * Reproducir una canción
@@ -158,9 +175,10 @@ export function MusicProvider({ children }: MusicProviderProps) {
       // Modo normal: siguiente canción
       nextIndex = currentIndex + 1;
 
-      // Si está en repeat y llegó al final, volver al inicio
+      // Si llegó al final, volver al inicio (loop automático)
       if (nextIndex >= playlist.length) {
-        nextIndex = isRepeat ? 0 : currentIndex;
+        nextIndex = 0;
+        console.log('🔁 Fin de la playlist - Volviendo al inicio');
       }
     }
 
@@ -171,7 +189,7 @@ export function MusicProvider({ children }: MusicProviderProps) {
       setIsPlaying(true);
       console.log('⏭️ Siguiente:', nextSong.title);
     }
-  }, [playlist, currentIndex, isShuffle, isRepeat]);
+  }, [playlist, currentIndex, isShuffle]);
 
   /**
    * Canción anterior
@@ -181,9 +199,9 @@ export function MusicProvider({ children }: MusicProviderProps) {
 
     let prevIndex = currentIndex - 1;
 
-    // Si está al inicio, ir al final si repeat está activo
+    // Si está al inicio, ir al final (loop automático)
     if (prevIndex < 0) {
-      prevIndex = isRepeat ? playlist.length - 1 : 0;
+      prevIndex = playlist.length - 1;
     }
 
     if (prevIndex >= 0 && prevIndex < playlist.length) {
@@ -193,7 +211,7 @@ export function MusicProvider({ children }: MusicProviderProps) {
       setIsPlaying(true);
       console.log('⏮️ Anterior:', prevSongData.title);
     }
-  }, [playlist, currentIndex, isRepeat]);
+  }, [playlist, currentIndex]);
 
   /**
    * Ir a una canción específica por índice
@@ -286,33 +304,6 @@ export function MusicProvider({ children }: MusicProviderProps) {
     });
   }, []);
 
-  /**
-   * Toggle modo repetir
-   */
-  const toggleRepeat = useCallback(() => {
-    setIsRepeat((prev) => {
-      console.log(prev ? '🔁 Repeat OFF' : '🔁 Repeat ON');
-      return !prev;
-    });
-  }, []);
-
-  /**
-   * Obtener tiempo actual (se puede conectar con el player real)
-   */
-  const getCurrentTime = useCallback(() => currentTime, [currentTime]);
-
-  /**
-   * Obtener duración (se puede conectar con el player real)
-   */
-  const getDuration = useCallback(() => duration, [duration]);
-
-  /**
-   * Establecer tiempo actual
-   */
-  const setCurrentTime = useCallback((time: number) => {
-    setCurrentTimeState(time);
-  }, []);
-
   // Valor del contexto memoizado
   const value = useMemo(
     () => ({
@@ -323,10 +314,10 @@ export function MusicProvider({ children }: MusicProviderProps) {
       isPlaying,
       volume,
       isShuffle,
-      isRepeat,
 
       // Acciones de reproducción
       playSong,
+      loadSong,
       pauseSong,
       togglePlayPause,
       nextSong,
@@ -342,12 +333,6 @@ export function MusicProvider({ children }: MusicProviderProps) {
       // Acciones de configuración
       setVolume,
       toggleShuffle,
-      toggleRepeat,
-
-      // Utilidades
-      getCurrentTime,
-      getDuration,
-      setCurrentTime,
     }),
     [
       currentSong,
@@ -356,8 +341,8 @@ export function MusicProvider({ children }: MusicProviderProps) {
       isPlaying,
       volume,
       isShuffle,
-      isRepeat,
       playSong,
+      loadSong,
       pauseSong,
       togglePlayPause,
       nextSong,
@@ -369,10 +354,6 @@ export function MusicProvider({ children }: MusicProviderProps) {
       clearPlaylist,
       setVolume,
       toggleShuffle,
-      toggleRepeat,
-      getCurrentTime,
-      getDuration,
-      setCurrentTime,
     ]
   );
 

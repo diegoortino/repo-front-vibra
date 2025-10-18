@@ -2,8 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import "./MusicPlayer.css";
 import { useMusicContext } from '../context';
 
-const API_BASE_URL = 'http://localhost:3000';
-
 function formatTime(totalSeconds: number) {
   const sec = Math.max(0, Math.floor(totalSeconds || 0));
   const h = Math.floor(sec / 3600);
@@ -16,7 +14,7 @@ function formatTime(totalSeconds: number) {
 
 export function MusicPlayer() {
   // Conectar con el MusicContext
-  const { currentSong, playlist } = useMusicContext();
+  const { currentSong, nextSong, prevSong, isPlaying: contextIsPlaying } = useMusicContext();
 
   /** Audio element ref */
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -34,13 +32,13 @@ export function MusicPlayer() {
   /** useEffect que escucha cambios en currentSong del Context */
   useEffect(() => {
     if (!currentSong || !currentSong.youtubeId || !audioRef.current) {
-      console.log('⚠️ MusicPlayer: No se puede reproducir', currentSong);
+      console.log('⚠️ MusicPlayer: No hay canción para cargar');
       return;
     }
 
-    console.log('🎵 MusicPlayer reproduciendo:', currentSong.title);
+    console.log('🎵 MusicPlayer cargando:', currentSong.title);
     console.log('   YouTube ID:', currentSong.youtubeId);
-    console.log('   Audio Path:', currentSong.audioPath);
+    console.log('   Cloudinary URL:', currentSong.cloudinaryUrl);
 
     // Actualizar la info visual
     setTrackTitle(currentSong.title);
@@ -50,20 +48,29 @@ export function MusicPlayer() {
     const thumbUrl = `https://img.youtube.com/vi/${currentSong.youtubeId}/hqdefault.jpg`;
     setTrackThumb(thumbUrl);
 
-    // Cargar audio desde el servidor
-    const audioUrl = currentSong.audioPath
-      ? `${API_BASE_URL}/${currentSong.audioPath}`
-      : `${API_BASE_URL}/audio/${currentSong.youtubeId}.mp3`;
+    // Solo usar Cloudinary URL
+    if (!currentSong.cloudinaryUrl) {
+      console.error('❌ No hay URL de Cloudinary para esta canción');
+      return;
+    }
+
+    const audioUrl = currentSong.cloudinaryUrl;
+    console.log('   🔊 Audio URL de Cloudinary:', audioUrl);
 
     audioRef.current.src = audioUrl;
     audioRef.current.load();
 
-    // Reproducir automáticamente
-    audioRef.current.play().catch((error) => {
-      console.error('❌ Error al reproducir:', error);
-    });
+    // Solo reproducir si el contexto indica que debe reproducirse
+    if (contextIsPlaying) {
+      console.log('   ▶️ Reproduciendo automáticamente');
+      audioRef.current.play().catch((error) => {
+        console.error('❌ Error al reproducir:', error);
+      });
+    } else {
+      console.log('   ⏸️ Canción cargada pero pausada');
+    }
 
-  }, [currentSong]);
+  }, [currentSong, contextIsPlaying]);
 
   /** Event handlers para el audio element */
   useEffect(() => {
@@ -91,8 +98,9 @@ export function MusicPlayer() {
 
     const handleEnded = () => {
       setIsPlaying(false);
-      console.log('⏹️ Audio ended');
-      // Aquí podrías llamar a nextTrack() si quieres auto-avance
+      console.log('⏹️ Audio ended - Pasando a la siguiente canción');
+      // Auto-avance a la siguiente canción
+      nextSong();
     };
 
     const handleError = (e: Event) => {
@@ -119,7 +127,7 @@ export function MusicPlayer() {
       audio.removeEventListener('ended', handleEnded);
       audio.removeEventListener('error', handleError);
     };
-  }, []);
+  }, [nextSong]);
 
   const togglePlayPause = () => {
     const audio = audioRef.current;
@@ -181,7 +189,7 @@ export function MusicPlayer() {
             <div
               className="MusicPlayer__button_backTrack"
               id="MusicPlayer__button_backTrack"
-              onClick={() => console.log('TODO: Previous track')}
+              onClick={prevSong}
               role="button"
               title="Anterior"
               aria-label="Anterior"
@@ -203,7 +211,7 @@ export function MusicPlayer() {
             <div
               className="MusicPlayer__button_nextTrack"
               id="MusicPlayer__button_nextTrack"
-              onClick={() => console.log('TODO: Next track')}
+              onClick={nextSong}
               role="button"
               title="Siguiente"
               aria-label="Siguiente"
