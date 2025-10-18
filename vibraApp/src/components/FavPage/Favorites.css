@@ -151,6 +151,7 @@
   justify-content: center;
   transition: all 0.2s ease;
   position: relative;
+  overflow: hidden;
 }
 
 .songCover {
@@ -174,6 +175,23 @@
 
 .suggestionCard:hover .coverIcon {
   transform: scale(1.08);
+}
+
+.playOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  font-size: 2.5rem;
+  color: white;
+}
+
+.suggestionCard:hover .playOverlay {
+  opacity: 1;
 }
 
 .cardContent {
@@ -291,7 +309,7 @@
   }
 
   .suggestionsGrid {
-    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    grid-template-columns: repeat(3, 1fr); /* 3 columnas */
     gap: 16px;
   }
 
@@ -333,7 +351,7 @@
   }
 
   .suggestionsGrid {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    grid-template-columns: repeat(2, 1fr); /* 2 columnas */
     gap: 14px;
   }
 
@@ -380,7 +398,7 @@
   }
 
   .suggestionsGrid {
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    grid-template-columns: repeat(2, 1fr); /* 2 columnas */
     gap: 12px;
   }
 
@@ -436,7 +454,7 @@
   }
 
   .suggestionsGrid {
-    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    grid-template-columns: repeat(2, 1fr); /* 2 columnas */
     gap: 10px;
   }
 

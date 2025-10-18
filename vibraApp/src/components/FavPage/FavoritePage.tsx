@@ -1,90 +1,133 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faMusic, faUser, faHeart } from '@fortawesome/free-solid-svg-icons';
+import { faHeart, faPlay } from '@fortawesome/free-solid-svg-icons';
 import './Favorites.css';
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { FavoriteSkeleton } from './FavoriteSkeleton';
+import { useMusic } from '../../hooks';
+import { useMusicContext } from '../../context';
+import type { Song } from '../../types';
 
 export function Favorites() {
-  const [isLoading, setIsLoading]=useState<Boolean>(false) //false mientras conectamos front y back
+  // Hook para obtener canciones del backend
+  const { songs, loading, error, fetchSongs } = useMusic();
 
-  const suggestions = [
-    { type: 'song', name: 'Summer Vibes', artist: 'DJ Sunset', plays: '2.3M' },
-    { type: 'song', name: 'Midnight Dreams', artist: 'Luna Park', plays: '1.8M' },
-    { type: 'song', name: 'Electric Soul', artist: 'The Waves', plays: '3.1M' },
-    { type: 'song', name: 'City Lights', artist: 'Urban Echo', plays: '2.7M' },
-    { type: 'song', name: 'Ocean Drive', artist: 'Coastal Breeze', plays: '1.5M' },
-    { type: 'song', name: 'Neon Nights', artist: 'Cyber Sound', plays: '4.2M' },
-    { type: 'artist', name: 'The Resonance', genre: 'Rock Alternativo', followers: '850K' },
-    { type: 'artist', name: 'Luna Martinez', genre: 'Pop Latino', followers: '1.2M' },
-    { type: 'artist', name: 'DJ Phoenix', genre: 'Electronic', followers: '620K' },
-    { type: 'artist', name: 'Acoustic Dreams', genre: 'Indie Folk', followers: '450K' },
-    { type: 'artist', name: 'Bass Revolution', genre: 'Hip Hop', followers: '2.1M' },
-    { type: 'artist', name: 'Velvet Voices', genre: 'Jazz Soul', followers: '380K' },
-  ];
+  // Context para reproducir canciones
+  const { playSong, loadSong } = useMusicContext();
+
+  // Cargar canciones cuando el componente se monta
+  useEffect(() => {
+    // Simple: pedir 24 canciones. El backend las devuelve aleatorias automáticamente
+    fetchSongs(24, 0);
+  }, []);
+
+  // Cargar la primera canción en el reproductor cuando se cargan las canciones
+  useEffect(() => {
+    if (songs.length > 0) {
+      // Solo cargar la primera canción en el reproductor, sin reproducir
+      const firstSong = songs[0];
+      console.log('📀 Cargando primera canción en el reproductor:', firstSong.title);
+      console.log('   Artista:', firstSong.artist);
+      console.log('   YouTube ID:', firstSong.youtubeId);
+      loadSong(firstSong, songs);
+    }
+  }, [songs, loadSong]);
+
+  // Log de canciones cargadas para debug
+  useEffect(() => {
+    if (songs.length > 0) {
+      console.log(`🎵 ${songs.length} canciones cargadas - Géneros únicos:`, songs.map(s => s.genre).join(', '));
+    }
+  }, [songs]);
+
+  // Manejar estados de carga y error
+  if (loading) {
+    return (
+      <div className="suggestionsContainer">
+        <FavoriteSkeleton />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="suggestionsContainer">
+        <div className="error-message">
+          <h3>Error al cargar canciones</h3>
+          <p>{error}</p>
+          <button onClick={() => fetchSongs(20, 0)}>Reintentar</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="suggestionsContainer">
-      {isLoading?(
-        <FavoriteSkeleton/>
-      ):(
-        <div>
-          {/* Playlists */}
-          <div className="section">
-            <h3 className="sectionTitle">Playlists</h3>
-            <div className="itemsGrid">
-              {[...Array(10)].map((_, index) => (
-                <div key={index} className="item">
-                  <div className="itemCover">Portada</div>
-                  <p className="itemName">Nombre</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-
-          <div className="suggestionsHeader">
-            <h2 className="suggestionsTitle">Descubre Nueva Música</h2>
-            <p className="suggestionsSubtitle">Recomendaciones personalizadas para ti</p>
-          </div>
-
-          <div className="suggestionsGrid">
-            {suggestions.map((item, index) => (
-              <div key={index} className="suggestionCard">
-                <div className="cardCover">
-                  {item.type === 'artist' ? (
-                    <div className="artistCover">
-                      <FontAwesomeIcon icon={faUser} className="coverIcon" />
-                    </div>
-                  ) : (
-                    <div className="songCover">
-                      <FontAwesomeIcon icon={faMusic} className="coverIcon" />
-                    </div>
-                  )}
-                </div>
-
-                <div className="cardContent">
-                  <h4 className="cardTitle">{item.name}</h4>
-                  <p className="cardSubtitle">
-                    {item.type === 'artist' ? item.genre : item.artist}
-                  </p>
-                  <div className="cardFooter">
-                    <span className="cardStats">
-                      {item.type === 'artist' 
-                        ? `${item.followers} seguidores` 
-                        : `${item.plays} reproducciones`}
-                    </span>
-                    <button className="likeButton">
-                      <FontAwesomeIcon icon={faHeart} />
-                    </button>
-                  </div>
-                </div>
+      <div>
+        {/* Playlists */}
+        <div className="section">
+          <h3 className="sectionTitle">Playlists</h3>
+          <div className="itemsGrid">
+            {[...Array(10)].map((_, index) => (
+              <div key={index} className="item">
+                <div className="itemCover">Portada</div>
+                <p className="itemName">Nombre</p>
               </div>
             ))}
           </div>
-
         </div>
-      )}
 
+        <div className="suggestionsHeader">
+          <h2 className="suggestionsTitle">Descubre Nueva Música</h2>
+        </div>
+
+        <div className="suggestionsGrid">
+          {songs.map((song: Song) => (
+            <div
+              key={song.id}
+              className="suggestionCard"
+              onClick={() => playSong(song, songs)}
+              style={{ cursor: 'pointer' }}
+            >
+              <div className="cardCover">
+                <div className="songCover" style={{
+                  backgroundImage: `url(https://img.youtube.com/vi/${song.youtubeId}/mqdefault.jpg)`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center'
+                }}>
+                  <div className="playOverlay">
+                    <FontAwesomeIcon icon={faPlay} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="cardContent">
+                <h4 className="cardTitle">{song.title}</h4>
+                <p className="cardSubtitle">{song.artist}</p>
+                <div className="cardFooter">
+                  <span className="cardStats">
+                    {song.genre || 'Sin género'} • {Math.floor(song.duration / 60)}:{String(song.duration % 60).padStart(2, '0')}
+                  </span>
+                  <button
+                    className="likeButton"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      console.log('❤️ Favorito:', song.title);
+                    }}
+                  >
+                    <FontAwesomeIcon icon={faHeart} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {songs.length === 0 && !loading && (
+          <div className="no-songs-message">
+            <p>No hay canciones disponibles. Asegúrate de que el backend esté corriendo.</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
