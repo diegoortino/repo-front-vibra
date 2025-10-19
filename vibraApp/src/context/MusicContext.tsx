@@ -33,6 +33,14 @@ interface MusicContextType {
   volume: number;
   isShuffle: boolean;
 
+  // Estado de canciones aleatorias para Favoritos
+  randomSongs: Song[];
+  setRandomSongs: (songs: Song[]) => void;
+
+  // Estado de playlist activa (para resaltado)
+  currentPlaylistId: string | null;
+  setCurrentPlaylistId: (id: string | null) => void;
+
   // Acciones de reproducción
   playSong: (song: Song, playlist?: Song[]) => void;
   loadSong: (song: Song, playlist?: Song[]) => void;
@@ -85,6 +93,12 @@ export function MusicProvider({ children }: MusicProviderProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolumeState] = useState(80); // 0-100
   const [isShuffle, setIsShuffle] = useState(false);
+
+  // Estado de canciones aleatorias para Favoritos (persiste mientras navegas)
+  const [randomSongs, setRandomSongsState] = useState<Song[]>([]);
+
+  // Estado de playlist activa (persiste mientras navegas)
+  const [currentPlaylistId, setCurrentPlaylistIdState] = useState<string | null>(null);
 
   /**
    * Cargar una canción sin reproducirla (solo mostrar info y miniatura)
@@ -147,7 +161,6 @@ export function MusicProvider({ children }: MusicProviderProps) {
    */
   const pauseSong = useCallback(() => {
     setIsPlaying(false);
-    console.log('⏸️ Pausado');
   }, []);
 
   /**
@@ -155,7 +168,6 @@ export function MusicProvider({ children }: MusicProviderProps) {
    */
   const togglePlayPause = useCallback(() => {
     setIsPlaying((prev) => !prev);
-    console.log(isPlaying ? '⏸️ Pausado' : '▶️ Reproduciendo');
   }, [isPlaying]);
 
   /**
@@ -178,7 +190,6 @@ export function MusicProvider({ children }: MusicProviderProps) {
       // Si llegó al final, volver al inicio (loop automático)
       if (nextIndex >= playlist.length) {
         nextIndex = 0;
-        console.log('🔁 Fin de la playlist - Volviendo al inicio');
       }
     }
 
@@ -187,7 +198,6 @@ export function MusicProvider({ children }: MusicProviderProps) {
       setCurrentSong(nextSong);
       setCurrentIndex(nextIndex);
       setIsPlaying(true);
-      console.log('⏭️ Siguiente:', nextSong.title);
     }
   }, [playlist, currentIndex, isShuffle]);
 
@@ -209,7 +219,6 @@ export function MusicProvider({ children }: MusicProviderProps) {
       setCurrentSong(prevSongData);
       setCurrentIndex(prevIndex);
       setIsPlaying(true);
-      console.log('⏮️ Anterior:', prevSongData.title);
     }
   }, [playlist, currentIndex]);
 
@@ -223,7 +232,6 @@ export function MusicProvider({ children }: MusicProviderProps) {
         setCurrentSong(song);
         setCurrentIndex(index);
         setIsPlaying(true);
-        console.log('🎯 Ir a:', song.title);
       }
     },
     [playlist]
@@ -234,7 +242,6 @@ export function MusicProvider({ children }: MusicProviderProps) {
    */
   const setPlaylist = useCallback((songs: Song[]) => {
     setPlaylistState(songs);
-    console.log('📃 Playlist actualizada:', songs.length, 'canciones');
   }, []);
 
   /**
@@ -244,10 +251,8 @@ export function MusicProvider({ children }: MusicProviderProps) {
     setPlaylistState((prev) => {
       // Evitar duplicados
       if (prev.some((s) => s.id === song.id)) {
-        console.log('⚠️ Canción ya está en la playlist');
         return prev;
       }
-      console.log('➕ Agregada a playlist:', song.title);
       return [...prev, song];
     });
   }, []);
@@ -267,7 +272,6 @@ export function MusicProvider({ children }: MusicProviderProps) {
           setCurrentIndex(newIndex);
         }
 
-        console.log('➖ Quitada de playlist');
         return newPlaylist;
       });
     },
@@ -282,7 +286,6 @@ export function MusicProvider({ children }: MusicProviderProps) {
     setCurrentSong(null);
     setCurrentIndex(0);
     setIsPlaying(false);
-    console.log('🗑️ Playlist limpiada');
   }, []);
 
   /**
@@ -291,17 +294,28 @@ export function MusicProvider({ children }: MusicProviderProps) {
   const setVolume = useCallback((newVolume: number) => {
     const clampedVolume = Math.max(0, Math.min(100, newVolume));
     setVolumeState(clampedVolume);
-    console.log('🔊 Volumen:', clampedVolume);
   }, []);
 
   /**
    * Toggle modo aleatorio
    */
   const toggleShuffle = useCallback(() => {
-    setIsShuffle((prev) => {
-      console.log(prev ? '🔀 Shuffle OFF' : '🔀 Shuffle ON');
-      return !prev;
-    });
+    setIsShuffle((prev) => !prev);
+  }, []);
+
+  /**
+   * Establecer canciones aleatorias para Favoritos
+   */
+  const setRandomSongs = useCallback((songs: Song[]) => {
+    setRandomSongsState(songs);
+    console.log('🎲 Canciones aleatorias actualizadas:', songs.length, 'canciones');
+  }, []);
+
+  /**
+   * Establecer playlist activa (para resaltado)
+   */
+  const setCurrentPlaylistId = useCallback((id: string | null) => {
+    setCurrentPlaylistIdState(id);
   }, []);
 
   // Valor del contexto memoizado
@@ -314,6 +328,14 @@ export function MusicProvider({ children }: MusicProviderProps) {
       isPlaying,
       volume,
       isShuffle,
+
+      // Estado de canciones aleatorias
+      randomSongs,
+      setRandomSongs,
+
+      // Estado de playlist activa
+      currentPlaylistId,
+      setCurrentPlaylistId,
 
       // Acciones de reproducción
       playSong,
@@ -341,6 +363,10 @@ export function MusicProvider({ children }: MusicProviderProps) {
       isPlaying,
       volume,
       isShuffle,
+      randomSongs,
+      setRandomSongs,
+      currentPlaylistId,
+      setCurrentPlaylistId,
       playSong,
       loadSong,
       pauseSong,

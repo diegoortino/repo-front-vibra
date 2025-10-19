@@ -14,7 +14,13 @@ function formatTime(totalSeconds: number) {
 
 export function MusicPlayer() {
   // Conectar con el MusicContext
-  const { currentSong, nextSong, prevSong, isPlaying: contextIsPlaying } = useMusicContext();
+  const {
+    currentSong,
+    nextSong,
+    prevSong,
+    isPlaying: contextIsPlaying,
+    togglePlayPause: contextTogglePlayPause
+  } = useMusicContext();
 
   /** Audio element ref */
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -23,54 +29,77 @@ export function MusicPlayer() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
+  const [volume, setVolume] = useState(1); // 0.0 a 1.0 (100%)
+  const [isMuted, setIsMuted] = useState(false);
+  const [previousVolume, setPreviousVolume] = useState(1); // Para restaurar al desmutear
 
   /** Info visual (título / canal / miniatura) */
   const [trackTitle, setTrackTitle] = useState("Selecciona una canción");
   const [trackAuthor, setTrackAuthor] = useState("");
   const [trackThumb, setTrackThumb] = useState<string>("");
 
-  /** useEffect que escucha cambios en currentSong del Context */
+  /** useEffect que escucha cambios en currentSong del Context (SOLO cuando cambia la canción) */
   useEffect(() => {
-    if (!currentSong || !currentSong.youtubeId || !audioRef.current) {
-      console.log('⚠️ MusicPlayer: No hay canción para cargar');
+    if (!currentSong || !audioRef.current) {
       return;
     }
-
-    console.log('🎵 MusicPlayer cargando:', currentSong.title);
-    console.log('   YouTube ID:', currentSong.youtubeId);
-    console.log('   Cloudinary URL:', currentSong.cloudinaryUrl);
 
     // Actualizar la info visual
     setTrackTitle(currentSong.title);
     setTrackAuthor(currentSong.artist);
 
-    // Obtener thumbnail de YouTube
-    const thumbUrl = `https://img.youtube.com/vi/${currentSong.youtubeId}/hqdefault.jpg`;
-    setTrackThumb(thumbUrl);
+    // Obtener thumbnail de YouTube (si existe)
+    if (currentSong.youtubeId) {
+      const thumbUrl = `https://img.youtube.com/vi/${currentSong.youtubeId}/hqdefault.jpg`;
+      setTrackThumb(thumbUrl);
+    }
 
     // Solo usar Cloudinary URL
     if (!currentSong.cloudinaryUrl) {
-      console.error('❌ No hay URL de Cloudinary para esta canción');
+      console.error('No hay URL de Cloudinary para esta canción');
       return;
     }
 
-    const audioUrl = currentSong.cloudinaryUrl;
-    console.log('   🔊 Audio URL de Cloudinary:', audioUrl);
-
-    audioRef.current.src = audioUrl;
+    audioRef.current.src = currentSong.cloudinaryUrl;
     audioRef.current.load();
 
     // Solo reproducir si el contexto indica que debe reproducirse
     if (contextIsPlaying) {
-      console.log('   ▶️ Reproduciendo automáticamente');
       audioRef.current.play().catch((error) => {
-        console.error('❌ Error al reproducir:', error);
+        console.error('Error al reproducir:', error);
       });
     } else {
-      console.log('   ⏸️ Canción cargada pero pausada');
+      audioRef.current.pause();
     }
 
+  }, [currentSong]); // Solo depende de currentSong, NO de contextIsPlaying
+
+  /** useEffect separado para manejar play/pause sin recargar la canción */
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || !currentSong) return;
+
+    if (contextIsPlaying) {
+      audio.play().catch((error) => {
+        console.error('Error al reproducir:', error);
+      });
+    } else {
+      audio.pause();
+    }
+  }, [contextIsPlaying, currentSong]);
+
+  /** Sincronizar estado local con el contexto cuando cambia la canción */
+  useEffect(() => {
+    setIsPlaying(contextIsPlaying);
   }, [currentSong, contextIsPlaying]);
+
+  /** Sincronizar volumen con el audio element */
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.volume = volume;
+    audio.muted = isMuted;
+  }, [volume, isMuted]);
 
   /** Event handlers para el audio element */
   useEffect(() => {
@@ -79,7 +108,6 @@ export function MusicPlayer() {
 
     const handleLoadedMetadata = () => {
       setDuration(audio.duration);
-      console.log('✅ Audio loaded, duration:', audio.duration);
     };
 
     const handleTimeUpdate = () => {
@@ -88,27 +116,21 @@ export function MusicPlayer() {
 
     const handlePlay = () => {
       setIsPlaying(true);
-      console.log('✅ Audio playing');
     };
 
     const handlePause = () => {
       setIsPlaying(false);
-      console.log('⏸️ Audio paused');
     };
 
     const handleEnded = () => {
       setIsPlaying(false);
-      console.log('⏹️ Audio ended - Pasando a la siguiente canción');
-      // Auto-avance a la siguiente canción
       nextSong();
     };
 
     const handleError = (e: Event) => {
-      console.error('❌ Audio error:', e);
       const target = e.target as HTMLAudioElement;
       if (target.error) {
-        console.error('   Error code:', target.error.code);
-        console.error('   Error message:', target.error.message);
+        console.error('Audio error:', target.error.code, target.error.message);
       }
     };
 
@@ -131,14 +153,18 @@ export function MusicPlayer() {
 
   const togglePlayPause = () => {
     const audio = audioRef.current;
-    if (!audio) return;
+    if (!audio || !audio.src) {
+      return;
+    }
 
-    if (isPlaying) {
-      audio.pause();
-    } else {
+    contextTogglePlayPause();
+
+    if (audio.paused) {
       audio.play().catch((error) => {
-        console.error('❌ Error al reproducir:', error);
+        console.error('Error al reproducir:', error);
       });
+    } else {
+      audio.pause();
     }
   };
 
@@ -153,7 +179,29 @@ export function MusicPlayer() {
     setCurrentTime(newTime);
   };
 
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newVolume = parseFloat(e.target.value);
+    setVolume(newVolume);
+    if (newVolume > 0 && isMuted) {
+      setIsMuted(false);
+    }
+  };
+
+  const toggleMute = () => {
+    if (isMuted) {
+      // Desmutear: restaurar volumen anterior
+      setIsMuted(false);
+      setVolume(previousVolume);
+    } else {
+      // Mutear: guardar volumen actual y silenciar
+      setPreviousVolume(volume);
+      setIsMuted(true);
+      setVolume(0);
+    }
+  };
+
   const progress = duration ? (currentTime / duration) * 100 : 0;
+  const volumePercentage = Math.round(volume * 100);
 
   return (
     <>
@@ -241,7 +289,31 @@ export function MusicPlayer() {
         </nav>
 
         <nav className="MusicPlayer__RightNav">
-          <div className="MusicPlayer__volumeControl">🔊</div>
+          <div className="MusicPlayer__volumeControl">
+            <button
+              className="MusicPlayer__volumeButton"
+              onClick={toggleMute}
+              title={isMuted ? "Activar sonido" : "Silenciar"}
+              aria-label={isMuted ? "Activar sonido" : "Silenciar"}
+            >
+              {isMuted || volume === 0 ? "🔇" : volume < 0.5 ? "🔉" : "🔊"}
+            </button>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={volume}
+              onChange={handleVolumeChange}
+              className="MusicPlayer__volumeSlider"
+              title={`Volumen: ${volumePercentage}%`}
+              aria-label="Control de volumen"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={volumePercentage}
+            />
+            <span className="MusicPlayer__volumePercentage">{volumePercentage}%</span>
+          </div>
           <div className="MusicPlayer__playlistControl">📃</div>
           <div className="MusicPlayer__iaImagesControl">🖼️</div>
         </nav>

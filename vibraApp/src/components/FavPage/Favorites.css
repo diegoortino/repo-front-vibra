@@ -8,20 +8,128 @@
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 }
 
+/* Carousel Container */
+.carouselContainer {
+  position: relative;
+  width: 100%;
+}
+
+/* Flechas de navegación */
+.carouselArrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.carouselArrow:hover {
+  background: rgba(139, 92, 246, 0.8);
+  border-color: rgba(139, 92, 246, 0.6);
+  transform: translateY(-50%) scale(1.1);
+  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+}
+
+.carouselArrow:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
+.carouselArrow--left {
+  left: 10px;
+}
+
+.carouselArrow--right {
+  right: 10px;
+}
+
+/* Ocultar scrollbar pero mantener funcionalidad */
+.itemsGrid {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE/Edge */
+}
+
+.itemsGrid::-webkit-scrollbar {
+  display: none !important; /* Chrome/Safari/Opera */
+  width: 0 !important;
+  height: 0 !important;
+}
+
 /* Header */
 .suggestionsHeader {
   margin-bottom: 40px;
   padding-bottom: 24px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
 }
 
 .suggestionsTitle {
   font-size: 2.5rem;
   font-weight: 700;
-  margin: 0 0 10px 0;
+  margin: 0;
   color: white;
   text-align: start;
   letter-spacing: -0.5px;
+}
+
+.discoverButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.8), rgba(99, 102, 241, 0.8));
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2);
+  white-space: nowrap;
+}
+
+.discoverButton__icon {
+  font-size: 0.9rem;
+  transition: transform 0.3s ease;
+}
+
+.discoverButton:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 1), rgba(99, 102, 241, 1));
+  border-color: rgba(139, 92, 246, 0.6);
+  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+  transform: translateY(-2px);
+}
+
+.discoverButton:hover:not(:disabled) .discoverButton__icon {
+  transform: rotate(180deg);
+}
+
+.discoverButton:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+}
+
+.discoverButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .suggestionsSubtitle {
@@ -78,6 +186,11 @@
   flex: 0 0 150px;
 }
 
+/* Playlists más grandes */
+.itemsGrid > .playlistCard {
+  flex: 0 0 200px;
+}
+
 .item {
   display: flex;
   flex-direction: column;
@@ -85,24 +198,46 @@
   gap: 10px;
 }
 
+.item--loading .itemCover {
+  background: linear-gradient(90deg, rgba(91, 33, 182, 0.3) 0%, rgba(109, 40, 217, 0.3) 50%, rgba(91, 33, 182, 0.3) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.item--loading .itemName {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  height: 16px;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
 .itemCover {
   width: 100%;
   height: 150px;
-  background: #5b21b6;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255, 255, 255, 0.4);
-  font-size: 0.85rem;
-  font-weight: 500;
-  transition: all 0.2s ease;
+  color: #fff;
+  font-size: 3.5rem;
+  font-weight: 700;
+  transition: all 0.3s ease;
   cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.itemCover:hover {
-  background: #6d28d9;
-  transform: translateY(-2px);
+.item:hover .itemCover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
 }
 
 .itemName {
@@ -115,6 +250,87 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.itemInfo {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0;
+  text-align: left;
+  width: 100%;
+  font-weight: 400;
+}
+
+/* Playlist Cards - Mismos estilos que suggestionCard pero más grandes */
+.playlistCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 8px;
+  border-radius: 12px;
+  border: 2px solid transparent;
+}
+
+.playlistCard:hover {
+  transform: translateY(-4px);
+}
+
+.playlistCard .cardCover {
+  width: 100%;
+  position: relative;
+}
+
+.playlistCoverImage {
+  width: 100%;
+  height: 200px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 5rem;
+  font-weight: 700;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.playlistCard:hover .playlistCoverImage {
+  background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%);
+}
+
+.playlistCard .playOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  font-size: 3rem;
+  color: white;
+}
+
+.playlistCard:hover .playOverlay {
+  opacity: 1;
+}
+
+/* Estilo cuando la playlist está reproduciéndose */
+.playlistCard--playing {
+  border-color: rgba(139, 92, 246, 0.6);
+  background: rgba(139, 92, 246, 0.08);
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+  animation: pulseGlow 2s ease-in-out infinite;
+}
+
+.playlistCard--playing:hover {
+  border-color: rgba(139, 92, 246, 0.8);
+  box-shadow: 0 0 25px rgba(139, 92, 246, 0.4);
 }
 
 /* Grid de sugerencias */
@@ -130,11 +346,37 @@
   align-items: center;
   gap: 12px;
   cursor: pointer;
-  transition: transform 0.2s ease;
+  transition: all 0.3s ease;
+  padding: 8px;
+  border-radius: 12px;
+  border: 2px solid transparent;
 }
 
 .suggestionCard:hover {
   transform: translateY(-4px);
+}
+
+/* Estilo cuando la canción está reproduciéndose */
+.suggestionCard--playing {
+  border-color: rgba(139, 92, 246, 0.6);
+  background: rgba(139, 92, 246, 0.08);
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+  animation: pulseGlow 2s ease-in-out infinite;
+}
+
+.suggestionCard--playing:hover {
+  border-color: rgba(139, 92, 246, 0.8);
+  box-shadow: 0 0 25px rgba(139, 92, 246, 0.4);
+}
+
+/* Animación sutil de pulso */
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(139, 92, 246, 0.5);
+  }
 }
 
 .cardCover {
@@ -210,7 +452,7 @@
 }
 
 .cardSubtitle {
-  font-size: 0.85rem;
+  font-size: 1.05rem;
   color: rgba(255, 255, 255, 0.5);
   margin: 0 0 12px 0;
   overflow: hidden;
@@ -301,6 +543,12 @@
 
   .suggestionsHeader {
     text-align: center;
+    justify-content: center;
+  }
+
+  .discoverButton {
+    font-size: 0.95rem;
+    padding: 0.65rem 1.25rem;
   }
 
   .sectionTitle {
@@ -350,6 +598,11 @@
     font-size: 1.8rem;
   }
 
+  .discoverButton {
+    font-size: 0.9rem;
+    padding: 0.6rem 1rem;
+  }
+
   .suggestionsGrid {
     grid-template-columns: repeat(2, 1fr); /* 2 columnas */
     gap: 14px;
@@ -395,6 +648,11 @@
 
   .sectionTitle {
     font-size: 1.6rem;
+  }
+
+  .discoverButton {
+    font-size: 0.85rem;
+    padding: 0.55rem 0.9rem;
   }
 
   .suggestionsGrid {
