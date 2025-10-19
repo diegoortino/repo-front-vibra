@@ -222,7 +222,105 @@ body {
   gap: 12px;
 }
 
-.MusicPlayer__volumeControl,
+/* Control de volumen expandido */
+.MusicPlayer__volumeControl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.MusicPlayer__volumeControl:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.MusicPlayer__volumeButton {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.9);
+  transition: transform 0.2s ease;
+  padding: 0;
+}
+
+.MusicPlayer__volumeButton:hover {
+  transform: scale(1.1);
+}
+
+.MusicPlayer__volumeSlider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 80px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+  outline: none;
+  cursor: pointer;
+  transition: height 0.2s ease;
+}
+
+.MusicPlayer__volumeSlider:hover {
+  height: 6px;
+}
+
+/* Thumb del slider - Chrome, Safari */
+.MusicPlayer__volumeSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: white;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+}
+
+.MusicPlayer__volumeSlider::-webkit-slider-thumb:hover {
+  width: 14px;
+  height: 14px;
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.4);
+}
+
+/* Thumb del slider - Firefox */
+.MusicPlayer__volumeSlider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: white;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+}
+
+.MusicPlayer__volumeSlider::-moz-range-thumb:hover {
+  width: 14px;
+  height: 14px;
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.4);
+}
+
+.MusicPlayer__volumePercentage {
+  min-width: 36px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Controles de playlist e IA - mantienen el estilo original */
 .MusicPlayer__playlistControl,
 .MusicPlayer__iaImagesControl{
   display: grid;
@@ -238,7 +336,6 @@ body {
   border: 1px solid transparent;
 }
 
-.MusicPlayer__volumeControl:hover,
 .MusicPlayer__playlistControl:hover,
 .MusicPlayer__iaImagesControl:hover {
   background: rgba(255, 255, 255, 0.2);
@@ -337,12 +434,35 @@ body {
   }
 }
 
-@media (max-width: 420px) {
-  .MusicPlayer__playlistControl,
-  .MusicPlayer__iaImagesControl { 
-    display: none; 
+@media (max-width: 768px) {
+  /* En tablets, ocultar el porcentaje de volumen */
+  .MusicPlayer__volumePercentage {
+    display: none;
   }
-  
+
+  .MusicPlayer__volumeSlider {
+    width: 60px;
+  }
+}
+
+@media (max-width: 420px) {
+  /* En móviles muy pequeños, solo mostrar el botón de mute */
+  .MusicPlayer__volumeSlider,
+  .MusicPlayer__volumePercentage {
+    display: none;
+  }
+
+  .MusicPlayer__volumeControl {
+    width: 36px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .MusicPlayer__playlistControl,
+  .MusicPlayer__iaImagesControl {
+    display: none;
+  }
+
   .MusicPlayer__MainContainer {
     gap: 8px;
     padding: 12px 12px 8px;
