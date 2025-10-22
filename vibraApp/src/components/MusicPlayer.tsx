@@ -1,40 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import "./MusicPlayer.css";
+import { useMusicContext } from '../context';
 
-declare global {
-  interface Window {
-    YT: any;
-    onYouTubeIframeAPIReady: () => void;
-    _ytApiLoadingPromise?: Promise<void>;
-  }
-}
-
-/** ===================== CONFIG ===================== */
-const API_URL = "http://localhost:3000/music/songs?limit=25"; // <- ajustá el limit o pasalo por props/env
-const API_IMAGENES_URL = "http://localhost:3000/images?limit=25";
-
-/** Utilidad para construir miniatura sin depender de oEmbed */
-const ytThumb = (id?: string) => (id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : "");
-
-/** Precarga de la API de YouTube */
-function cargarAPIYouTube(): Promise<void> {
-  if (window.YT && window.YT.Player) return Promise.resolve();
-  if (!window._ytApiLoadingPromise) {
-    window._ytApiLoadingPromise = new Promise<void>((resolver) => {
-      const script = document.createElement("script");
-      script.src = "https://www.youtube.com/iframe_api";
-      document.body.appendChild(script);
-      window.onYouTubeIframeAPIReady = () => resolver();
-    });
-  }
-  return window._ytApiLoadingPromise!;
-}
-
-function formatearTiempo(segundosTotales: number) {
-  const seg = Math.max(0, Math.floor(segundosTotales || 0));
-  const h = Math.floor(seg / 3600);
-  const m = Math.floor((seg % 3600) / 60);
-  const s = seg % 60;
+function formatTime(totalSeconds: number) {
+  const sec = Math.max(0, Math.floor(totalSeconds || 0));
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
   const mm = h > 0 ? String(m).padStart(2, "0") : String(m);
   const ss = String(s).padStart(2, "0");
   return h > 0 ? `${h}:${mm}:${ss}` : `${m}:${ss}`;
@@ -56,313 +28,204 @@ export type Cancion = {
 };
 
 export function MusicPlayer() {
-  /** ======= refs & estado del player ======= */
-  const playerMainRef = useRef<any>(null);
-  const playerPreNextRef = useRef<any>(null);
-  const playerPrePrevRef = useRef<any>(null);
+  // Conectar con el MusicContext
+  const {
+    currentSong,
+    nextSong,
+    prevSong,
+    isPlaying: contextIsPlaying,
+    togglePlayPause: contextTogglePlayPause
+  } = useMusicContext();
 
-  const hostMainRef = useRef<HTMLDivElement | null>(null);
-  const hostPreNextRef = useRef<HTMLDivElement | null>(null);
-  const hostPrePrevRef = useRef<HTMLDivElement | null>(null);
+  /** Audio element ref */
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const idIntervaloProgresoRef = useRef<number | null>(null);
+  /** Estado de reproducción y metadatos */
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [volume, setVolume] = useState(1); // 0.0 a 1.0 (100%)
+  const [isMuted, setIsMuted] = useState(false);
+  const [previousVolume, setPreviousVolume] = useState(1); // Para restaurar al desmutear
 
-  const [lista, setLista] = useState<Cancion[]>([]);
-  const [indiceActual, setIndiceActual] = useState(0);
+  /** Info visual (título / canal / miniatura) */
+  const [trackTitle, setTrackTitle] = useState("Selecciona una canción");
+  const [trackAuthor, setTrackAuthor] = useState("");
+  const [trackThumb, setTrackThumb] = useState<string>("");
 
-  const [estaReproduciendo, setEstaReproduciendo] = useState(false);
-  const [duracion, setDuracion] = useState(0);
-  const [tiempoActual, setTiempoActual] = useState(0);
-
-  const cancionActual = lista[indiceActual];
-
-  /** ======= metadatos visibles ======= */
-  const tituloPista = cancionActual?.title || "Cargando...";
-  const autorPista = cancionActual?.artist || "";
-  const miniaturaPista = ytThumb(cancionActual?.youtubeId);
-
-  /** ============== VISUALIZADOR (carga desde API) ============== */
-  const [mostrarVisualizador, setMostrarVisualizador] = useState(false);
-  const abrirVisualizador = () => setMostrarVisualizador(true);
-  const cerrarVisualizador = () => setMostrarVisualizador(false);
-
-  // Imágenes provenientes de la API de /images (usamos imageUrl)
-  const [imagenesVisualizador, setImagenesVisualizador] = useState<string[]>([]);
-
-  // Carga inicial de imágenes del visualizador
+  /** useEffect que escucha cambios en currentSong del Context (SOLO cuando cambia la canción) */
   useEffect(() => {
-    let cancelado = false;
-    (async () => {
-      try {
-        const res = await fetch(API_IMAGENES_URL);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const json = await res.json();
-        const urls: string[] = Array.isArray(json?.data)
-          ? json.data
-              .map((item: any) => item?.imageUrl)
-              .filter((u: unknown) => typeof u === "string" && !!u)
-          : [];
-        if (!cancelado) setImagenesVisualizador(urls);
-      } catch (err) {
-        console.error("Error cargando imágenes visualizador:", err);
+    if (!currentSong || !audioRef.current) {
+      return;
+    }
+
+    // Actualizar la info visual
+    setTrackTitle(currentSong.title);
+    setTrackAuthor(currentSong.artist);
+
+    // Obtener thumbnail de YouTube (si existe)
+    if (currentSong.youtubeId) {
+      const thumbUrl = `https://img.youtube.com/vi/${currentSong.youtubeId}/hqdefault.jpg`;
+      setTrackThumb(thumbUrl);
+    }
+
+    // Solo usar Cloudinary URL
+    if (!currentSong.cloudinaryUrl) {
+      console.error('No hay URL de Cloudinary para esta canción');
+      return;
+    }
+
+    audioRef.current.src = currentSong.cloudinaryUrl;
+    audioRef.current.load();
+
+    // Solo reproducir si el contexto indica que debe reproducirse
+    if (contextIsPlaying) {
+      audioRef.current.play().catch((error) => {
+        console.error('Error al reproducir:', error);
+      });
+    } else {
+      audioRef.current.pause();
+    }
+
+  }, [currentSong]); // Solo depende de currentSong, NO de contextIsPlaying
+
+  /** useEffect separado para manejar play/pause sin recargar la canción */
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || !currentSong) return;
+
+    if (contextIsPlaying) {
+      audio.play().catch((error) => {
+        console.error('Error al reproducir:', error);
+      });
+    } else {
+      audio.pause();
+    }
+  }, [contextIsPlaying, currentSong]);
+
+  /** Sincronizar estado local con el contexto cuando cambia la canción */
+  useEffect(() => {
+    setIsPlaying(contextIsPlaying);
+  }, [currentSong, contextIsPlaying]);
+
+  /** Sincronizar volumen con el audio element */
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.volume = volume;
+    audio.muted = isMuted;
+  }, [volume, isMuted]);
+
+  /** Event handlers para el audio element */
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const handleLoadedMetadata = () => {
+      setDuration(audio.duration);
+    };
+
+    const handleTimeUpdate = () => {
+      setCurrentTime(audio.currentTime);
+    };
+
+    const handlePlay = () => {
+      setIsPlaying(true);
+    };
+
+    const handlePause = () => {
+      setIsPlaying(false);
+    };
+
+    const handleEnded = () => {
+      setIsPlaying(false);
+      nextSong();
+    };
+
+    const handleError = (e: Event) => {
+      const target = e.target as HTMLAudioElement;
+      if (target.error) {
+        console.error('Audio error:', target.error.code, target.error.message);
       }
-    })();
-    return () => {
-      cancelado = true;
     };
-  }, []);
 
-  // Precarga de imágenes en memoria para transiciones más suaves
-  const cacheImagenesRef = useRef<Map<string, HTMLImageElement>>(new Map());
-  useEffect(() => {
-    imagenesVisualizador.forEach((url) => {
-      if (!url) return;
-      if (cacheImagenesRef.current.has(url)) return;
-      const img = new Image();
-      img.decoding = "async";
-      img.loading = "eager";
-      img.src = url;
-      cacheImagenesRef.current.set(url, img);
-    });
-  }, [imagenesVisualizador]);
-
-  // Índices y animación del slide
-  const [indiceImagen, setIndiceImagen] = useState(0);
-  const indicePrevioRef = useRef(0);
-  const [animandoSlide, setAnimandoSlide] = useState(false);
-
-  // Avance automático cada 5s sólo cuando el visualizador está abierto y hay reproducción
-  useEffect(() => {
-    if (!mostrarVisualizador) return;
-    if (!estaReproduciendo) return;
-    if (imagenesVisualizador.length < 2) return;
-
-    const id = window.setInterval(() => {
-      setAnimandoSlide(true);
-      setIndiceImagen((idxAnterior) => {
-        indicePrevioRef.current = idxAnterior;
-        return (idxAnterior + 1) % imagenesVisualizador.length;
-      });
-      window.setTimeout(() => setAnimandoSlide(false), 450);
-    }, 5000);
-
-    return () => clearInterval(id);
-  }, [mostrarVisualizador, estaReproduciendo, imagenesVisualizador.length]);
-
-  // Reiniciar índice de imagen al cambiar de pista
-  useEffect(() => {
-    setIndiceImagen(0);
-    indicePrevioRef.current = 0;
-  }, [indiceActual]);
-
-  // ESC para cerrar overlay
-  useEffect(() => {
-    if (!mostrarVisualizador) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setMostrarVisualizador(false);
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [mostrarVisualizador]);
-
-  /** ================== ciclo de vida ================== */
-  useEffect(() => {
-    let desmontado = false;
-
-    (async () => {
-      // 1) Levantamos lista desde tu API
-      const listaDesdeAPI = await cargarListaDesdeAPI();
-      if (desmontado) return;
-      setLista(listaDesdeAPI);
-
-      // 2) Cargamos API de YouTube y creamos players (main + preloads)
-      await cargarAPIYouTube();
-      if (desmontado) return;
-
-      // MAIN
-      playerMainRef.current = new window.YT.Player(hostMainRef.current!, {
-        width: 0,
-        height: 0,
-        videoId: listaDesdeAPI[0]?.youtubeId,
-        playerVars: { controls: 0, modestbranding: 1, rel: 0, fs: 0, enablejsapi: 1 },
-        events: {
-          onReady: (e: any) => {
-            const d = e.target.getDuration?.() || listaDesdeAPI[0]?.duration || 0;
-            if (d) setDuracion(d);
-          },
-          onStateChange: (e: any) => {
-            const ESTADO = window.YT.PlayerState;
-            if (e.data === ESTADO.PLAYING) setEstaReproduciendo(true);
-            if (e.data === ESTADO.PAUSED || e.data === ESTADO.ENDED) setEstaReproduciendo(false);
-            if (e.data === ESTADO.ENDED) pistaSiguiente(true);
-          },
-        },
-      });
-
-      // PRELOAD NEXT
-      playerPreNextRef.current = new window.YT.Player(hostPreNextRef.current!, {
-        width: 0,
-        height: 0,
-        videoId: listaDesdeAPI[1]?.youtubeId || undefined,
-        playerVars: { controls: 0, modestbranding: 1, rel: 0, fs: 0, enablejsapi: 1 },
-        events: {
-          onReady: () => {
-            // cue para cargar metadata sin reproducir
-            const nextId = listaDesdeAPI[1]?.youtubeId;
-            if (nextId) playerPreNextRef.current?.cueVideoById?.(nextId);
-          },
-        },
-      });
-
-      // PRELOAD PREV
-      playerPrePrevRef.current = new window.YT.Player(hostPrePrevRef.current!, {
-        width: 0,
-        height: 0,
-        videoId: listaDesdeAPI[listaDesdeAPI.length - 1]?.youtubeId || undefined,
-        playerVars: { controls: 0, modestbranding: 1, rel: 0, fs: 0, enablejsapi: 1 },
-        events: {
-          onReady: () => {
-            const prevId = listaDesdeAPI[listaDesdeAPI.length - 1]?.youtubeId;
-            if (prevId) playerPrePrevRef.current?.cueVideoById?.(prevId);
-          },
-        },
-      });
-
-      iniciarPollingProgreso();
-      // Inicializa los preloads en base al índice actual (0)
-      refrescarPreloads(0, listaDesdeAPI);
-    })();
+    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    audio.addEventListener('play', handlePlay);
+    audio.addEventListener('pause', handlePause);
+    audio.addEventListener('ended', handleEnded);
+    audio.addEventListener('error', handleError);
 
     return () => {
-      desmontado = true;
-      detenerPollingProgreso();
-      try {
-        playerMainRef.current?.destroy?.();
-        playerPreNextRef.current?.destroy?.();
-        playerPrePrevRef.current?.destroy?.();
-      } catch {}
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+      audio.removeEventListener('play', handlePlay);
+      audio.removeEventListener('pause', handlePause);
+      audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('error', handleError);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [nextSong]);
 
-  async function cargarListaDesdeAPI(): Promise<Cancion[]> {
-    try {
-      const res = await fetch(API_URL);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
-      const parsed: Cancion[] = Array.isArray(json) ? json : [];
-      return parsed.filter((x) => !!x.youtubeId);
-    } catch (err) {
-      console.error("Error cargando canciones:", err);
-      return [];
+  const togglePlayPause = () => {
+    const audio = audioRef.current;
+    if (!audio || !audio.src) {
+      return;
     }
-  }
 
-  /** ============== progreso & controles ============== */
-  const iniciarPollingProgreso = () => {
-    if (idIntervaloProgresoRef.current != null) return;
-    idIntervaloProgresoRef.current = window.setInterval(() => {
-      const p = playerMainRef.current;
-      if (!p) return;
-      const t = p.getCurrentTime?.() || 0;
-      const d = p.getDuration?.() || duracion;
-      setTiempoActual(t);
-      if (d && d !== duracion) setDuracion(d);
-    }, 250) as unknown as number;
-  };
+    contextTogglePlayPause();
 
-  const detenerPollingProgreso = () => {
-    if (idIntervaloProgresoRef.current != null) {
-      clearInterval(idIntervaloProgresoRef.current);
-      idIntervaloProgresoRef.current = null;
+    if (audio.paused) {
+      audio.play().catch((error) => {
+        console.error('Error al reproducir:', error);
+      });
+    } else {
+      audio.pause();
     }
   };
 
-  function normalizarIndice(n: number, total: number) {
-    return ((n % total) + total) % total;
-  }
-
-  function refrescarPreloads(nuevoIndice: number, arr = lista) {
-    if (!arr.length) return;
-    const total = arr.length;
-    const idx = normalizarIndice(nuevoIndice, total);
-    const idxNext = normalizarIndice(idx + 1, total);
-    const idxPrev = normalizarIndice(idx - 1, total);
-
-    const nextId = arr[idxNext]?.youtubeId;
-    const prevId = arr[idxPrev]?.youtubeId;
-
-    // Cue en players ocultos. Nota: políticas de autoplay pueden limitar buffering real,
-    // pero la metadata y parte de la caché quedan preparadas, reduciendo la latencia perceptible.
-    if (playerPreNextRef.current && nextId) {
-      try { playerPreNextRef.current.cueVideoById(nextId); } catch {}
-    }
-    if (playerPrePrevRef.current && prevId) {
-      try { playerPrePrevRef.current.cueVideoById(prevId); } catch {}
-    }
-  }
-
-  function cambiarPista(nuevoIndice: number, autoplay = true) {
-    if (!lista.length) return;
-    const total = lista.length;
-    const idx = normalizarIndice(nuevoIndice, total);
-    setIndiceActual(idx);
-    setTiempoActual(0);
-
-    const nextId = lista[idx].youtubeId;
-    // Intento: si está cued en preNext/prePrev, igual cargamos en el main (no se puede transferir buffer entre instancias)
-    if (autoplay) playerMainRef.current?.loadVideoById?.(nextId);
-    else {
-      // Cargamos metadata sin reproducir
-      if (playerMainRef.current?.cueVideoById) playerMainRef.current.cueVideoById(nextId);
-      else playerMainRef.current?.loadVideoById?.(nextId);
-      playerMainRef.current?.pauseVideo?.();
-    }
-
-    if (lista[idx]?.duration) setDuracion(lista[idx].duration!);
-
-    // Actualizamos preloads con el nuevo índice
-    refrescarPreloads(idx);
-  }
-
-  const pistaSiguiente = (autoplay = true) => cambiarPista(indiceActual + 1, autoplay);
-  const pistaAnterior = (autoplay = true) => cambiarPista(indiceActual - 1, autoplay);
-
-  const alternarPlayPause = () => {
-    const p = playerMainRef.current;
-    if (!p) return;
-    const ESTADO = window.YT.PlayerState;
-    const estado = p.getPlayerState?.();
-    if (estado === ESTADO.PLAYING) p.pauseVideo?.();
-    else p.playVideo?.();
+  const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
+    const audio = audioRef.current;
+    if (!audio || !duration) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const pct = Math.min(1, Math.max(0, x / rect.width));
+    const newTime = pct * duration;
+    audio.currentTime = newTime;
+    setCurrentTime(newTime);
   };
 
-  const onCambiarProgreso = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = Number(e.target.value) || 0;
-    const nuevo = Math.min(1, Math.max(0, v));
-    const segundos = (duracion || 0) * nuevo;
-    playerMainRef.current?.seekTo?.(segundos, true);
-    setTiempoActual(segundos);
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newVolume = parseFloat(e.target.value);
+    setVolume(newVolume);
+    if (newVolume > 0 && isMuted) {
+      setIsMuted(false);
+    }
   };
 
-  const progreso = duracion ? Math.min(1, Math.max(0, tiempoActual / duracion)) : 0;
+  const toggleMute = () => {
+    if (isMuted) {
+      // Desmutear: restaurar volumen anterior
+      setIsMuted(false);
+      setVolume(previousVolume);
+    } else {
+      // Mutear: guardar volumen actual y silenciar
+      setPreviousVolume(volume);
+      setIsMuted(true);
+      setVolume(0);
+    }
+  };
+
+  const progress = duration ? (currentTime / duration) * 100 : 0;
+  const volumePercentage = Math.round(volume * 100);
 
   /** ====================== UI ====================== */
   return (
     <>
-      {/* Hosts ocultos para players */}
-      <div
-        ref={hostMainRef}
-        style={{ position: "absolute", width: 0, height: 0, overflow: "hidden", opacity: 0 }}
-        aria-hidden="true"
-      />
-      <div
-        ref={hostPreNextRef}
-        style={{ position: "absolute", width: 0, height: 0, overflow: "hidden", opacity: 0 }}
-        aria-hidden="true"
-      />
-      <div
-        ref={hostPrePrevRef}
-        style={{ position: "absolute", width: 0, height: 0, overflow: "hidden", opacity: 0 }}
-        aria-hidden="true"
+      {/* Audio element (oculto, controlado por JS) */}
+      <audio
+        ref={audioRef}
+        preload="auto"
+        style={{ display: 'none' }}
       />
 
       {mostrarVisualizador && (
@@ -414,13 +277,40 @@ export function MusicPlayer() {
           </div>
         </nav>
 
-        <nav className="Reproductor__ZonaCentral">
-          <div className="Reproductor__ContenedorControles">
-            <button className="Reproductor__BotonControl" onClick={() => pistaAnterior(true)}> ⏮</button>
-            <button className="Reproductor__BotonControl" onClick={alternarPlayPause} disabled={!lista.length}>
-              {estaReproduciendo ? "⏸" : "▶"}
-            </button>
-            <button className="Reproductor__BotonControl" onClick={() => pistaSiguiente(true)}> ⏭</button>
+        <nav className="MusicPlayer__CenterNav">
+          <div className="MusicPlayer__musicControlsContainer">
+            <div
+              className="MusicPlayer__button_backTrack"
+              id="MusicPlayer__button_backTrack"
+              onClick={prevSong}
+              role="button"
+              title="Anterior"
+              aria-label="Anterior"
+            >
+              ⏮
+            </div>
+
+            <div
+              className="MusicPlayer__button_playStop"
+              id="MusicPlayer__button_playStop"
+              onClick={togglePlayPause}
+              role="button"
+              aria-label={isPlaying ? "Pausar" : "Reproducir"}
+              title={isPlaying ? "Pausar" : "Reproducir"}
+            >
+              {isPlaying ? "⏸" : "▶"}
+            </div>
+
+            <div
+              className="MusicPlayer__button_nextTrack"
+              id="MusicPlayer__button_nextTrack"
+              onClick={nextSong}
+              role="button"
+              title="Siguiente"
+              aria-label="Siguiente"
+            >
+              ⏭
+            </div>
           </div>
           <div className="Reproductor__ContenedorProgreso">
             <div className="Reproductor__Tiempo Reproductor__TiempoActual">{formatearTiempo(tiempoActual)}</div>
@@ -438,10 +328,34 @@ export function MusicPlayer() {
           </div>
         </nav>
 
-        <nav className="Reproductor__ZonaDerecha">
-          <div className="Reproductor__ControlVolumen">🔊</div>
-          <div className="Reproductor__ControlLista">📃</div>
-          <div className="Reproductor__ControlImagenesIA" onClick={abrirVisualizador}>🖼️</div>
+        <nav className="MusicPlayer__RightNav">
+          <div className="MusicPlayer__volumeControl">
+            <button
+              className="MusicPlayer__volumeButton"
+              onClick={toggleMute}
+              title={isMuted ? "Activar sonido" : "Silenciar"}
+              aria-label={isMuted ? "Activar sonido" : "Silenciar"}
+            >
+              {isMuted || volume === 0 ? "🔇" : volume < 0.5 ? "🔉" : "🔊"}
+            </button>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={volume}
+              onChange={handleVolumeChange}
+              className="MusicPlayer__volumeSlider"
+              title={`Volumen: ${volumePercentage}%`}
+              aria-label="Control de volumen"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={volumePercentage}
+            />
+            <span className="MusicPlayer__volumePercentage">{volumePercentage}%</span>
+          </div>
+          <div className="MusicPlayer__playlistControl">📃</div>
+          <div className="MusicPlayer__iaImagesControl">🖼️</div>
         </nav>
       </div>
     </>

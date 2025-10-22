@@ -1,0 +1,79 @@
+.skeleton {
+  background: linear-gradient(90deg, rgb(40, 40, 40) 25%, #2f2f2f 50%, #292929 75%);
+  background-size: 200% 100%;
+  animation: loading 5s infinite;
+  border-radius: 4px;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+}
+
+.skeleton-text {
+  height: 16px;
+  margin: 8px 0;
+}
+
+.skeleton-username {
+  height: 24px;
+  width: 150px;
+  margin-bottom: 16px;
+}
+
+.skeleton-label {
+  width: 60px;
+  height: 14px;
+}
+
+.skeleton-number {
+  width: 40px;
+  height: 18px;
+  margin-top: 4px;
+}
+
+.skeleton-button {
+  height: 40px;
+  width: 100%;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.skeleton-icon-button {
+  width: 40px;
+  height: 40px;
+}
+
+.skeleton-title {
+  height: 20px;
+  width: 120px;
+  margin-bottom: 16px;
+}
+
+.skeleton-item-cover {
+  height: 120px;
+  width: 100%;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.skeleton-item-name {
+  height: 14px;
+  width: 80%;
+}
+
+.skeleton-item-artist {
+  height: 12px;
+  width: 60%;
+  margin-top: 4px;
+}
