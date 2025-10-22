@@ -15,13 +15,14 @@ export function LoginModal({ isOpen, onClose, onOpenRegister}: Props) {
 
         const googleToken =credentialResponse.credential
 
-        const response = await fetch('', {
+        //cuando deploy cambiar a .env
+        const response = await fetch('http://localhost:3000/auth/google', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                token: googleToken
+                id_token: googleToken
             })
         });
 
@@ -30,7 +31,7 @@ export function LoginModal({ isOpen, onClose, onOpenRegister}: Props) {
         }
 
         const data= await response.json()
-        console.log("respuesta del back" + data)
+        console.log("respuesta del back" +  JSON.stringify(data, null, 2))
 
         //redireccion
         //window.location.href="Otro Dominio"
