@@ -1,23 +1,9 @@
-/* ====== Layout base ====== */
-:root{
-  --player-height: 100px;     /* incrementado para acomodar progreso debajo */
-  --player-padding-x: 20px;   /* más padding para mejor espaciado */
-  --player-gap: 16px;         /* gap más generoso */
-  --player-z: 50;             /* nivel sobre el contenido */
-  --sidebar-width-mobile: 0px;
-  --sidebar-width-desktop: 60px;
-}
 
-/* Evita que el contenido quede oculto detrás del player fijo */
-html, body, #root {
-  height: 100%;
-}
-body {
-  padding-bottom: var(--player-height);
-}
+/* =========================
+   CONTENEDOR PRINCIPAL
+   ========================= */
 
-/* Contenedor principal de la barra */
-.MusicPlayer__MainContainer{
+.Reproductor__ContenedorPrincipal {
   position: fixed;
   left: var(--sidebar-width-mobile);
   right: 0;
@@ -40,10 +26,13 @@ body {
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
 }
 
-/* Zonas principales */
-.MusicPlayer__LeftNav,
-.MusicPlayer__CenterNav,
-.MusicPlayer__RightNav{
+/* =========================
+   ZONAS
+   ========================= */
+
+.Reproductor__ZonaIzquierda,
+.Reproductor__ZonaCentral,
+.Reproductor__ZonaDerecha {
   display: flex;
   align-items: center;
   flex-direction: row;
@@ -51,14 +40,29 @@ body {
   grid-row: 1;
 }
 
-/* ====== Zona izquierda ====== */
-.MusicPlayer__LeftNav{
+.Reproductor__ZonaIzquierda {
   justify-content: flex-start;
   gap: 16px;
 }
 
-/* Contenedor para la miniatura */
-.MusicPlayer__albumArtContainer {
+.Reproductor__ZonaCentral {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.Reproductor__ZonaDerecha {
+  justify-content: center;
+  gap: 12px;
+}
+
+/* =========================
+   MINIATURA + INFO
+   ========================= */
+
+.Reproductor__ContenedorMiniatura {
   width: 64px;
   height: 64px;
   border-radius: 12px;
@@ -66,20 +70,19 @@ body {
   flex: 0 0 auto;
   display: grid;
   place-items: center;
-  background: rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.08);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Imagen de miniatura */
-.MusicPlayer__albumArtImage {
+.Reproductor__ImagenMiniatura {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
 
-.MusicPlayer__trackInfoContainer{
+.Reproductor__ContenedorInfoPista {
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -87,7 +90,7 @@ body {
   gap: 4px;
 }
 
-.MusicPlayer__trackTitle{
+.Reproductor__TituloPista {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -97,7 +100,7 @@ body {
   line-height: 1.2;
 }
 
-.MusicPlayer__artistName{
+.Reproductor__AutorPista {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -106,25 +109,18 @@ body {
   font-weight: 400;
 }
 
-/* ====== Zona central ====== */
-.MusicPlayer__CenterNav{
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  min-width: 0;
-}
+/* =========================
+   CONTROLES CENTRALES
+   ========================= */
 
-.MusicPlayer__musicControlsContainer{
+.Reproductor__ContenedorControles {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 20px;
 }
 
-.MusicPlayer__button_backTrack,
-.MusicPlayer__button_playStop,
-.MusicPlayer__button_nextTrack{
+.Reproductor__BotonControl {
   display: grid;
   place-items: center;
   border-radius: 8px;
@@ -133,17 +129,18 @@ body {
   color: white;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid transparent;
+  background: none;
 }
 
-.MusicPlayer__button_backTrack,
-.MusicPlayer__button_nextTrack {
+.Reproductor__BotonControl--anterior,
+.Reproductor__BotonControl--siguiente {
   width: 40px;
   height: 40px;
   background: rgba(255, 255, 255, 0.1);
   font-size: 16px;
 }
 
-.MusicPlayer__button_playStop {
+.Reproductor__BotonControl--play {
   width: 48px;
   height: 48px;
   background: rgba(255, 255, 255, 0.95);
@@ -152,32 +149,35 @@ body {
   box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
 }
 
-.MusicPlayer__button_backTrack:hover,
-.MusicPlayer__button_nextTrack:hover {
+.Reproductor__BotonControl--anterior:hover,
+.Reproductor__BotonControl--siguiente:hover {
   background: rgba(255, 255, 255, 0.2);
   transform: scale(1.05);
   border-color: rgba(255, 255, 255, 0.2);
 }
 
-.MusicPlayer__button_playStop:hover {
+.Reproductor__BotonControl--play:hover {
   background: white;
   transform: scale(1.05);
   box-shadow: 0 6px 16px rgba(255, 255, 255, 0.3);
 }
 
-/* Contenedor de progreso - ahora ocupa toda la zona central por debajo */
-.MusicPlayer__progressBarContainer {
+/* =========================
+   BARRA DE PROGRESO
+   ========================= */
+
+.Reproductor__ContenedorProgreso {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 12px;
   width: 100%;
-  grid-column: 1 / -1; /* ocupa todas las columnas */
+  grid-column: 1 / -1;
   grid-row: 2;
   margin-top: 4px;
 }
 
-.MusicPlayer__time {
+.Reproductor__Tiempo {
   min-width: 48px;
   text-align: center;
   font-variant-numeric: tabular-nums;
@@ -186,22 +186,26 @@ body {
   font-weight: 500;
 }
 
-/* Pista y relleno */
-.MusicPlayer__progressTrack {
+.Reproductor__Tiempo--actual {
+  color: white;
+  white-space: nowrap;
+}
+
+.Reproductor__BarraProgreso {
   position: relative;
-  height: 4px;
+  height: 6px;
   border-radius: 999px;
-  background: rgba(255,255,255,0.15);
+  background: rgba(255, 255, 255, 0.15);
   cursor: pointer;
   overflow: hidden;
   transition: height 0.2s ease;
 }
 
-.MusicPlayer__progressTrack:hover {
+.Reproductor__BarraProgreso:hover {
   height: 6px;
 }
 
-.MusicPlayer__progressFill {
+.Reproductor__ProgresoRelleno {
   position: absolute;
   inset: 0 auto 0 0;
   width: 0%;
@@ -211,16 +215,9 @@ body {
   transition: width 0.1s linear;
 }
 
-.MusicPlayer__currentTime{
-  color: white;
-  white-space: nowrap;
-}
-
-/* ====== Zona derecha ====== */
-.MusicPlayer__RightNav{
-  justify-content: flex-end;
-  gap: 12px;
-}
+/* =========================
+   ZONA DERECHA - CONTROLES
+   ========================= */
 
 /* Control de volumen expandido */
 .MusicPlayer__volumeControl {
@@ -344,52 +341,155 @@ body {
   border-color: rgba(255, 255, 255, 0.2);
 }
 
-/* ====== Responsivo ====== */
+/* =========================
+   VISUALIZADOR OVERLAY
+   ========================= */
+
+.Reproductor__VisualizadorOverlay {
+  position: fixed;
+  z-index: 80;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: var(--alto-reproductor, 100px);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(12, 14, 18, 0.55);
+  backdrop-filter: saturate(130%) blur(8px);
+  -webkit-backdrop-filter: saturate(130%) blur(8px);
+}
+
+.Reproductor__VisualizadorContenido {
+  position: relative;
+  max-width: 92vw;
+  max-height: calc(100vh - var(--alto-reproductor, 100px) - 6vh);
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(8px, 2vw, 20px);
+  border-radius: 16px;
+  background: rgba(20, 22, 28, 0.25);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+}
+
+/* =========================
+   SLIDER (slide horizontal)
+   ========================= */
+
+.Reproductor__VisualizadorSlider {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(40, 42, 54, 0.55), rgba(22, 24, 30, 0.55));
+  display: block;
+}
+
+.Reproductor__Slide {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+  transform: translateX(0);
+  transition: transform 420ms ease;
+}
+
+.Reproductor__Slide--in {
+  transform: translateX(0);
+}
+
+.Reproductor__Slide--out {
+  transform: translateX(0);
+}
+
+.Reproductor__VisualizadorSlider.is-animating .Reproductor__Slide--in {
+  animation: repro-slide-in 420ms ease forwards;
+}
+
+.Reproductor__VisualizadorSlider.is-animating .Reproductor__Slide--out {
+  animation: repro-slide-out 420ms ease forwards;
+}
+
+@keyframes repro-slide-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes repro-slide-out {
+  from { transform: translateX(0); }
+  to { transform: translateX(-100%); }
+}
+
+/* =========================
+   RESPONSIVO
+   ========================= */
+
 /* Desktop: ajustar para sidebar */
 @media (min-width: 550px) {
   :root {
     --sidebar-width-mobile: var(--sidebar-width-desktop);
   }
   
-  .MusicPlayer__MainContainer {
+  .Reproductor__ContenedorPrincipal {
     left: var(--sidebar-width-desktop);
     width: calc(100% - var(--sidebar-width-desktop));
     grid-template-columns: minmax(220px, 1fr) minmax(320px, 1.8fr) minmax(180px, 0.9fr);
   }
   
-  .MusicPlayer__albumArtContainer { 
+  .Reproductor__ContenedorMiniatura { 
     width: 72px; 
     height: 72px; 
   }
   
-  .MusicPlayer__trackTitle {
+  .Reproductor__TituloPista {
     font-size: 16px;
   }
   
-  .MusicPlayer__artistName {
+  .Reproductor__AutorPista {
     font-size: 14px;
   }
 }
 
 /* Tablets: reducimos mínimos y compresión suave */
 @media (max-width: 1024px) and (min-width: 550px) {
-  .MusicPlayer__MainContainer {
+  .Reproductor__ContenedorPrincipal {
     grid-template-columns: minmax(180px, 1.1fr) minmax(280px, 1.6fr) minmax(140px, 0.8fr);
   }
-  .MusicPlayer__button_backTrack,
-  .MusicPlayer__button_nextTrack { width: 36px; height: 36px; }
-  .MusicPlayer__button_playStop { width: 44px; height: 44px; }
+  
+  .Reproductor__BotonControl--anterior,
+  .Reproductor__BotonControl--siguiente { 
+    width: 36px; 
+    height: 36px; 
+  }
+  
+  .Reproductor__BotonControl--play { 
+    width: 44px; 
+    height: 44px; 
+  }
 }
 
 /* Móviles: layout compacto */
-@media (max-width: 549px){
-  :root{ 
+@media (max-width: 549px) {
+  :root { 
     --player-height: 88px; 
     --sidebar-width-mobile: 0px;
+    --alto-reproductor: 88px;
   }
-  body{ padding-bottom: var(--player-height); }
+  
+  body { 
+    padding-bottom: var(--player-height); 
+  }
 
-  .MusicPlayer__MainContainer {
+  .Reproductor__ContenedorPrincipal {
     left: 0;
     width: 100%;
     grid-template-columns: 1fr 1.6fr 1fr;
@@ -397,38 +497,38 @@ body {
     padding: 12px 16px 8px;
   }
 
-  .MusicPlayer__LeftNav .MusicPlayer__trackInfoContainer { 
+  .Reproductor__ZonaIzquierda .Reproductor__ContenedorInfoPista { 
     display: none; 
   }
   
-  .MusicPlayer__albumArtContainer { 
+  .Reproductor__ContenedorMiniatura { 
     width: 52px; 
     height: 52px; 
     border-radius: 8px;
   }
   
-  .MusicPlayer__musicControlsContainer {
+  .Reproductor__ContenedorControles {
     gap: 16px;
   }
   
-  .MusicPlayer__button_backTrack,
-  .MusicPlayer__button_nextTrack { 
+  .Reproductor__BotonControl--anterior,
+  .Reproductor__BotonControl--siguiente { 
     width: 36px; 
     height: 36px; 
     font-size: 14px;
   }
   
-  .MusicPlayer__button_playStop { 
+  .Reproductor__BotonControl--play { 
     width: 42px; 
     height: 42px; 
     font-size: 16px;
   }
   
-  .MusicPlayer__progressBarContainer {
+  .Reproductor__ContenedorProgreso {
     gap: 8px;
   }
   
-  .MusicPlayer__time {
+  .Reproductor__Tiempo {
     font-size: 11px;
     min-width: 40px;
   }

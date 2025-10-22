@@ -12,6 +12,21 @@ function formatTime(totalSeconds: number) {
   return h > 0 ? `${h}:${mm}:${ss}` : `${m}:${ss}`;
 }
 
+/** Tipo de canción que devuelve tu API */
+export type Cancion = {
+  id: string;
+  title: string;
+  artist: string;
+  youtubeId: string;
+  duration?: number; // en segundos (opcional)
+  genre?: string;
+  viewCount?: string;
+  publishedAt?: string;
+  audioPath?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 export function MusicPlayer() {
   // Conectar con el MusicContext
   const {
@@ -203,6 +218,7 @@ export function MusicPlayer() {
   const progress = duration ? (currentTime / duration) * 100 : 0;
   const volumePercentage = Math.round(volume * 100);
 
+  /** ====================== UI ====================== */
   return (
     <>
       {/* Audio element (oculto, controlado por JS) */}
@@ -212,23 +228,52 @@ export function MusicPlayer() {
         style={{ display: 'none' }}
       />
 
-      {/* UI del reproductor */}
-      <div className="MusicPlayer__MainContainer">
-        <nav className="MusicPlayer__LeftNav">
-          <div className="MusicPlayer__albumArtContainer">
-            {trackThumb && (
+      {mostrarVisualizador && (
+        <div className="Reproductor__VisualizadorOverlay" onClick={cerrarVisualizador} role="dialog" aria-modal="true">
+          <div className="Reproductor__VisualizadorContenido" onClick={(e) => e.stopPropagation()}>
+            <div className={`Reproductor__VisualizadorSlider ${animandoSlide ? "is-animating" : ""}`}>
+              {animandoSlide && imagenesVisualizador.length > 1 && (
+                <img
+                  key={`prev-${indicePrevioRef.current}-${imagenesVisualizador[indicePrevioRef.current] || "ph"}`}
+                  src={imagenesVisualizador[indicePrevioRef.current] || undefined}
+                  alt=""
+                  className="Reproductor__Slide Reproductor__Slide--out"
+                  draggable={false}
+                />
+              )}
               <img
-                src={trackThumb}
-                alt={trackTitle ? `Cover: ${trackTitle}` : "Cover"}
-                className="MusicPlayer__albumArtImage"
+                key={`cur-${indiceImagen}-${imagenesVisualizador[indiceImagen] || "ph"}`}
+                src={imagenesVisualizador[indiceImagen] || undefined}
+                alt=""
+                className="Reproductor__Slide Reproductor__Slide--in"
+                draggable={false}
+              />
+              {/* Fallback simple si no hay imágenes */}
+              {imagenesVisualizador.length === 0 && (
+                <div className="Reproductor__SlideFallback">Sin imágenes disponibles</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="Reproductor__ContenedorPrincipal">
+        <nav className="Reproductor__ZonaIzquierda">
+          <div className="Reproductor__ContenedorMiniatura" onClick={abrirVisualizador} title="Abrir visualizador de imágenes">
+            {miniaturaPista && (
+              <img
+                src={miniaturaPista}
+                alt={tituloPista ? `Portada: ${tituloPista}` : "Portada"}
+                className="Reproductor__ImagenMiniatura"
                 loading="eager"
                 decoding="async"
+                draggable={false}
               />
             )}
           </div>
-          <div className="MusicPlayer__trackInfoContainer">
-            <div className="MusicPlayer__trackTitle">{trackTitle}</div>
-            <div className="MusicPlayer__artistName">{trackAuthor}</div>
+          <div className="Reproductor__ContenedorInfoPista">
+            <div className="Reproductor__TituloPista">{tituloPista}</div>
+            <div className="Reproductor__AutorPista">{autorPista}</div>
           </div>
         </nav>
 
@@ -267,24 +312,19 @@ export function MusicPlayer() {
               ⏭
             </div>
           </div>
-
-          {/* Barra de progreso + tiempos */}
-          <div className="MusicPlayer__progressBarContainer">
-            <div className="MusicPlayer__time MusicPlayer__currentTime">{formatTime(currentTime)}</div>
-
-            <div
-              className="MusicPlayer__progressTrack"
-              role="progressbar"
-              aria-valuemin={0}
-              aria-valuemax={Math.round(duration)}
-              aria-valuenow={Math.round(currentTime)}
-              onClick={handleSeek}
-              title="Click para buscar en la pista"
-            >
-              <div className="MusicPlayer__progressFill" style={{ width: `${progress}%` }} />
-            </div>
-
-            <div className="MusicPlayer__time MusicPlayer__totalTime">{formatTime(duration)}</div>
+          <div className="Reproductor__ContenedorProgreso">
+            <div className="Reproductor__Tiempo Reproductor__TiempoActual">{formatearTiempo(tiempoActual)}</div>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.001}
+              value={progreso}
+              onChange={onCambiarProgreso}
+              className="Reproductor__BarraProgreso"
+              disabled={!lista.length}
+            />
+            <div className="Reproductor__Tiempo Reproductor__TiempoTotal">{formatearTiempo(duracion)}</div>
           </div>
         </nav>
 
