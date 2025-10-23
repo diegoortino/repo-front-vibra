@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { FavoriteSkeleton } from './FavoriteSkeleton';
 import { PlaylistCover } from './PlaylistCover';
 import { useMusic } from '../../hooks';
-import { useMusicContext } from '../../context';
+import { useMusicContext } from '../../context/MusicContext';
 import type { Song } from '../../types';
 import { playlistsService } from '../../services/playlistsService';
 import type { Playlist } from '../../services/playlistsService';
@@ -300,7 +300,7 @@ export function Favorites() {
         </div>
 
         <div className="suggestionsGrid">
-          {randomSongs.map((song: Song) => {
+          {(randomSongs as Song[]).map((song) => {
             // Verificar si esta canción está reproduciéndose Y no hay playlist activa
             const isPlaying = currentSong?.id === song.id && currentPlaylistId === null;
 

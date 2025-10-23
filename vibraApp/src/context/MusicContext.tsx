@@ -1,419 +1,180 @@
-/**
- * Context de Música
- *
- * Proporciona estado global para:
- * - Canción actual reproduciéndose
- * - Playlist activa
- * - Estado de reproducción (playing/paused)
- * - Controles del reproductor
- *
- * Este Context permite que cualquier componente acceda y controle
- * el reproductor sin necesidad de pasar props manualmente.
- */
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
-import {
-  createContext,
-  useContext,
-  useState,
-  useCallback,
-  useMemo,
-} from 'react';
-import type { ReactNode } from 'react';
-import type { Song } from '../types';
+/** Tipos base */
+export interface Track {
+  id?: string;
+  title?: string;
+  artist?: string;
+  youtubeId: string;
+  duration?: number;
+  imageUrl?: string;
+  genre?: string;
+}
 
-/**
- * Tipo del contexto de música
- */
-interface MusicContextType {
-  // Estado actual
-  currentSong: Song | null;
-  playlist: Song[];
-  currentIndex: number;
-  isPlaying: boolean;
-  volume: number;
-  isShuffle: boolean;
+/** Valor del contexto unificado */
+interface MusicContextValue {
+  // ===== API usada por MusicPlayer =====
+  youtubeIdCurrent: string | null;
+  youtubeIdNext: string | null;
+  youtubeIdPrev: string | null;
+  playlistName: string;
+  playlistSongs: Track[];
+  imageLinks: string[];
+  setCurrentIndex: (index: number) => void;
+  loadPlaylist: (opts: { name: string; songs: Track[]; images?: string[]; startIndex?: number }) => void;
 
-  // Estado de canciones aleatorias para Favoritos
-  randomSongs: Song[];
-  setRandomSongs: (songs: Song[]) => void;
-
-  // Estado de playlist activa (para resaltado)
+  // ===== API usada por FavoritePage (compat) =====
+  playSong: (song: Track, list?: Track[]) => void;
+  loadSong: (song: Track, list?: Track[]) => void;
+  currentSong: Track | null;
+  playlist: Track[];
+  randomSongs: Track[];
+  setRandomSongs: (songs: Track[]) => void;
   currentPlaylistId: string | null;
   setCurrentPlaylistId: (id: string | null) => void;
-
-  // Acciones de reproducción
-  playSong: (song: Song, playlist?: Song[]) => void;
-  loadSong: (song: Song, playlist?: Song[]) => void;
-  pauseSong: () => void;
-  togglePlayPause: () => void;
-  nextSong: () => void;
-  prevSong: () => void;
-  seekToSong: (index: number) => void;
-
-  // Acciones de playlist
-  setPlaylist: (songs: Song[]) => void;
-  addToPlaylist: (song: Song) => void;
-  removeFromPlaylist: (songId: string) => void;
-  clearPlaylist: () => void;
-
-  // Acciones de configuración
-  setVolume: (volume: number) => void;
-  toggleShuffle: () => void;
 }
 
-/**
- * Crear el contexto
- */
-const MusicContext = createContext<MusicContextType | undefined>(undefined);
+const MusicContext = createContext<MusicContextValue | undefined>(undefined);
 
-/**
- * Props del Provider
- */
-interface MusicProviderProps {
+function normIndex(i: number, len: number) {
+  return len > 0 ? ((i % len) + len) % len : 0;
+}
+
+export function MusicProvider({
+  children,
+  playlistName: initialName = "",
+  songs: initialSongs = [],
+  images: initialImages = [],
+  startIndex = 0,
+}: {
   children: ReactNode;
-}
+  playlistName?: string;
+  songs?: Track[];
+  images?: string[];
+  startIndex?: number;
+}) {
+  // Estado común
+  const [name, setName] = useState(initialName);
+  const [songs, setSongs] = useState<Track[]>(initialSongs);
+  const [images, setImages] = useState<string[]>(initialImages);
+  const [currentIndex, setCurrentIndex] = useState<number>(normIndex(startIndex, initialSongs.length));
 
-/**
- * Provider del contexto de música
- *
- * Envuelve la aplicación para proporcionar estado global de música
- *
- * @example
- * ```tsx
- * <MusicProvider>
- *   <App />
- * </MusicProvider>
- * ```
- */
-export function MusicProvider({ children }: MusicProviderProps) {
-  // Estado
-  const [currentSong, setCurrentSong] = useState<Song | null>(null);
-  const [playlist, setPlaylistState] = useState<Song[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [volume, setVolumeState] = useState(80); // 0-100
-  const [isShuffle, setIsShuffle] = useState(false);
-
-  // Estado de canciones aleatorias para Favoritos (persiste mientras navegas)
-  const [randomSongs, setRandomSongsState] = useState<Song[]>([]);
-
-  // Estado de playlist activa (persiste mientras navegas)
-  const [currentPlaylistId, setCurrentPlaylistIdState] = useState<string | null>(null);
-
-  /**
-   * Cargar una canción sin reproducirla (solo mostrar info y miniatura)
-   */
-  const loadSong = useCallback(
-    (song: Song, newPlaylist?: Song[]) => {
-      setCurrentSong(song);
-      setIsPlaying(false); // NO reproducir automáticamente
-
-      // Si se proporciona una nueva playlist
-      if (newPlaylist) {
-        setPlaylistState(newPlaylist);
-        const index = newPlaylist.findIndex((s) => s.id === song.id);
-        setCurrentIndex(index >= 0 ? index : 0);
-      } else if (playlist.length > 0) {
-        // Si ya hay playlist, buscar el índice de la canción
-        const index = playlist.findIndex((s) => s.id === song.id);
-        setCurrentIndex(index >= 0 ? index : 0);
-      } else {
-        // Si no hay playlist, crear una con solo esta canción
-        setPlaylistState([song]);
-        setCurrentIndex(0);
-      }
-
-      console.log('📀 Canción cargada (sin reproducir):', song.title, 'por', song.artist);
-    },
-    [playlist]
+  // Estado extra para compatibilidad con FavoritePage
+  const [currentSong, setCurrentSong] = useState<Track | null>(
+    initialSongs[normIndex(startIndex, initialSongs.length)] ?? null
   );
+  const [activePlaylist, setActivePlaylist] = useState<Track[]>(initialSongs);
+  const [randomSongs, _setRandomSongs] = useState<Track[]>([]);
+  const [currentPlaylistId, setCurrentPlaylistId] = useState<string | null>(null);
 
-  /**
-   * Reproducir una canción
-   */
-  const playSong = useCallback(
-    (song: Song, newPlaylist?: Song[]) => {
-      setCurrentSong(song);
-      setIsPlaying(true);
+  // Derivados para MusicPlayer
+  const ids = useMemo(() => {
+    if (!songs.length) {
+      return { cur: null as string | null, next: null as string | null, prev: null as string | null };
+    }
+    const idx = normIndex(currentIndex, songs.length);
+    const nextIdx = normIndex(idx + 1, songs.length);
+    const prevIdx = normIndex(idx - 1, songs.length);
+    return {
+      cur: songs[idx]?.youtubeId ?? null,
+      next: songs[nextIdx]?.youtubeId ?? null,
+      prev: songs[prevIdx]?.youtubeId ?? null,
+    };
+  }, [songs, currentIndex]);
 
-      // Si se proporciona una nueva playlist
-      if (newPlaylist) {
-        setPlaylistState(newPlaylist);
-        const index = newPlaylist.findIndex((s) => s.id === song.id);
-        setCurrentIndex(index >= 0 ? index : 0);
-      } else if (playlist.length > 0) {
-        // Si ya hay playlist, buscar el índice de la canción
-        const index = playlist.findIndex((s) => s.id === song.id);
-        setCurrentIndex(index >= 0 ? index : 0);
-      } else {
-        // Si no hay playlist, crear una con solo esta canción
-        setPlaylistState([song]);
-        setCurrentIndex(0);
-      }
-
-      console.log('🎵 Reproduciendo:', song.title, 'por', song.artist);
-    },
-    [playlist]
-  );
-
-  /**
-   * Pausar la canción actual
-   */
-  const pauseSong = useCallback(() => {
-    setIsPlaying(false);
-  }, []);
-
-  /**
-   * Toggle play/pause
-   */
-  const togglePlayPause = useCallback(() => {
-    setIsPlaying((prev) => !prev);
-  }, [isPlaying]);
-
-  /**
-   * Siguiente canción
-   */
-  const nextSong = useCallback(() => {
-    if (playlist.length === 0) return;
-
-    let nextIndex: number;
-
-    if (isShuffle) {
-      // Modo aleatorio: canción random (diferente a la actual)
-      do {
-        nextIndex = Math.floor(Math.random() * playlist.length);
-      } while (nextIndex === currentIndex && playlist.length > 1);
+  // --- Sincronización clave: índice y canción actual ---
+  useEffect(() => {
+    if (!songs.length) {
+      if (currentIndex !== 0) setCurrentIndex(0);
+      if (currentSong !== null) setCurrentSong(null);
+      return;
+    }
+    const idx = normIndex(currentIndex, songs.length);
+    if (idx !== currentIndex) {
+      setCurrentIndex(idx);
+      setCurrentSong(songs[idx] ?? null);
     } else {
-      // Modo normal: siguiente canción
-      nextIndex = currentIndex + 1;
-
-      // Si llegó al final, volver al inicio (loop automático)
-      if (nextIndex >= playlist.length) {
-        nextIndex = 0;
-      }
+      const target = songs[idx] ?? null;
+      if (currentSong !== target) setCurrentSong(target);
     }
+  }, [songs, currentIndex, currentSong]);
 
-    if (nextIndex < playlist.length) {
-      const nextSong = playlist[nextIndex];
-      setCurrentSong(nextSong);
-      setCurrentIndex(nextIndex);
-      setIsPlaying(true);
-    }
-  }, [playlist, currentIndex, isShuffle]);
+  // Helpers
+  const setIndiceActual = (index: number) => {
+    setCurrentIndex((prev) => (Number.isFinite(index) ? normIndex(index, songs.length) : prev));
+    const idx = Number.isFinite(index) ? normIndex(index, songs.length) : currentIndex;
+    setCurrentSong(songs[idx] ?? null);
+  };
 
-  /**
-   * Canción anterior
-   */
-  const prevSong = useCallback(() => {
-    if (playlist.length === 0) return;
+  const loadPlaylist = ({
+    name: n,
+    songs: s,
+    images: imgs = [],
+    startIndex: si = 0,
+  }: {
+    name: string;
+    songs: Track[];
+    images?: string[];
+    startIndex?: number;
+  }) => {
+    const safeSongs = Array.isArray(s) ? s : [];
+    setName(n);
+    setSongs(safeSongs);
+    setActivePlaylist(safeSongs);
+    setImages(Array.isArray(imgs) ? imgs : []);
+    const idx = normIndex(si, safeSongs.length);
+    setCurrentIndex(idx);
+    setCurrentSong(safeSongs[idx] ?? null);
+  };
 
-    let prevIndex = currentIndex - 1;
+  // Métodos favoritos / compat
+  const playSong = (song: Track, list?: Track[]) => {
+    const base = Array.isArray(list) && list.length ? list : activePlaylist.length ? activePlaylist : songs;
+    setActivePlaylist(base);
+    setSongs(base); // fuente única para MusicPlayer
+    setCurrentSong(song);
+    const idx = base.findIndex((t) => t.id === song.id || t.youtubeId === song.youtubeId);
+    setCurrentIndex(idx === -1 ? 0 : idx);
+  };
 
-    // Si está al inicio, ir al final (loop automático)
-    if (prevIndex < 0) {
-      prevIndex = playlist.length - 1;
-    }
+  const loadSong = (song: Track, list?: Track[]) => {
+    playSong(song, list);
+  };
 
-    if (prevIndex >= 0 && prevIndex < playlist.length) {
-      const prevSongData = playlist[prevIndex];
-      setCurrentSong(prevSongData);
-      setCurrentIndex(prevIndex);
-      setIsPlaying(true);
-    }
-  }, [playlist, currentIndex]);
+  const setRandomSongs = (arr: Track[]) => {
+    _setRandomSongs(Array.isArray(arr) ? arr : []);
+  };
 
-  /**
-   * Ir a una canción específica por índice
-   */
-  const seekToSong = useCallback(
-    (index: number) => {
-      if (index >= 0 && index < playlist.length) {
-        const song = playlist[index];
-        setCurrentSong(song);
-        setCurrentIndex(index);
-        setIsPlaying(true);
-      }
-    },
-    [playlist]
-  );
+  const value: MusicContextValue = {
+    // MusicPlayer
+    youtubeIdCurrent: ids.cur,
+    youtubeIdNext: ids.next,
+    youtubeIdPrev: ids.prev,
+    playlistName: name,
+    playlistSongs: songs,
+    imageLinks: images,
+    setCurrentIndex: setIndiceActual,
+    loadPlaylist,
 
-  /**
-   * Establecer playlist
-   */
-  const setPlaylist = useCallback((songs: Song[]) => {
-    setPlaylistState(songs);
-  }, []);
-
-  /**
-   * Agregar canción a playlist
-   */
-  const addToPlaylist = useCallback((song: Song) => {
-    setPlaylistState((prev) => {
-      // Evitar duplicados
-      if (prev.some((s) => s.id === song.id)) {
-        return prev;
-      }
-      return [...prev, song];
-    });
-  }, []);
-
-  /**
-   * Quitar canción de playlist
-   */
-  const removeFromPlaylist = useCallback(
-    (songId: string) => {
-      setPlaylistState((prev) => {
-        const newPlaylist = prev.filter((s) => s.id !== songId);
-
-        // Si se eliminó la canción actual, reproducir la siguiente
-        if (currentSong?.id === songId && newPlaylist.length > 0) {
-          const newIndex = Math.min(currentIndex, newPlaylist.length - 1);
-          setCurrentSong(newPlaylist[newIndex]);
-          setCurrentIndex(newIndex);
-        }
-
-        return newPlaylist;
-      });
-    },
-    [currentSong, currentIndex]
-  );
-
-  /**
-   * Limpiar playlist
-   */
-  const clearPlaylist = useCallback(() => {
-    setPlaylistState([]);
-    setCurrentSong(null);
-    setCurrentIndex(0);
-    setIsPlaying(false);
-  }, []);
-
-  /**
-   * Establecer volumen
-   */
-  const setVolume = useCallback((newVolume: number) => {
-    const clampedVolume = Math.max(0, Math.min(100, newVolume));
-    setVolumeState(clampedVolume);
-  }, []);
-
-  /**
-   * Toggle modo aleatorio
-   */
-  const toggleShuffle = useCallback(() => {
-    setIsShuffle((prev) => !prev);
-  }, []);
-
-  /**
-   * Establecer canciones aleatorias para Favoritos
-   */
-  const setRandomSongs = useCallback((songs: Song[]) => {
-    setRandomSongsState(songs);
-    console.log('🎲 Canciones aleatorias actualizadas:', songs.length, 'canciones');
-  }, []);
-
-  /**
-   * Establecer playlist activa (para resaltado)
-   */
-  const setCurrentPlaylistId = useCallback((id: string | null) => {
-    setCurrentPlaylistIdState(id);
-  }, []);
-
-  // Valor del contexto memoizado
-  const value = useMemo(
-    () => ({
-      // Estado
-      currentSong,
-      playlist,
-      currentIndex,
-      isPlaying,
-      volume,
-      isShuffle,
-
-      // Estado de canciones aleatorias
-      randomSongs,
-      setRandomSongs,
-
-      // Estado de playlist activa
-      currentPlaylistId,
-      setCurrentPlaylistId,
-
-      // Acciones de reproducción
-      playSong,
-      loadSong,
-      pauseSong,
-      togglePlayPause,
-      nextSong,
-      prevSong,
-      seekToSong,
-
-      // Acciones de playlist
-      setPlaylist,
-      addToPlaylist,
-      removeFromPlaylist,
-      clearPlaylist,
-
-      // Acciones de configuración
-      setVolume,
-      toggleShuffle,
-    }),
-    [
-      currentSong,
-      playlist,
-      currentIndex,
-      isPlaying,
-      volume,
-      isShuffle,
-      randomSongs,
-      setRandomSongs,
-      currentPlaylistId,
-      setCurrentPlaylistId,
-      playSong,
-      loadSong,
-      pauseSong,
-      togglePlayPause,
-      nextSong,
-      prevSong,
-      seekToSong,
-      setPlaylist,
-      addToPlaylist,
-      removeFromPlaylist,
-      clearPlaylist,
-      setVolume,
-      toggleShuffle,
-    ]
-  );
+    // FavoritePage
+    playSong,
+    loadSong,
+    currentSong,
+    playlist: activePlaylist,
+    randomSongs,
+    setRandomSongs,
+    currentPlaylistId,
+    setCurrentPlaylistId,
+  };
 
   return <MusicContext.Provider value={value}>{children}</MusicContext.Provider>;
 }
 
-/**
- * Hook para usar el contexto de música
- *
- * @throws Error si se usa fuera del MusicProvider
- * @returns Contexto de música
- *
- * @example
- * ```tsx
- * function MyComponent() {
- *   const { currentSong, playSong, isPlaying } = useMusicContext();
- *
- *   return (
- *     <div>
- *       <p>Reproduciendo: {currentSong?.title}</p>
- *       <button onClick={() => playSong(someSong)}>Play</button>
- *     </div>
- *   );
- * }
- * ```
- */
+// Hook
 export function useMusicContext() {
-  const context = useContext(MusicContext);
-
-  if (context === undefined) {
-    throw new Error('useMusicContext debe usarse dentro de un MusicProvider');
-  }
-
-  return context;
+  const ctx = useContext(MusicContext);
+  if (!ctx) throw new Error("useMusicContext debe usarse dentro de <MusicProvider>");
+  return ctx;
 }
 
 export default MusicContext;

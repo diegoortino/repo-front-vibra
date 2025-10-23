@@ -1,15 +1,16 @@
-.sideBarContainer{
+.sideBarContainer {
     position: fixed;
-    bottom: 0;
+    top: 0;
     left: 0;
-    height: 60px;
-    width: 100%;
+    width: 60px;
+    height: 100%;
     display: flex;
-    justify-content: center;
-    text-align: center;
+    flex-direction: column;
+    justify-content: flex-start;
     align-items: center;
     border-right: 1px solid rgb(60, 60, 60);
-    z-index: 1001;
+    background-color: #141418; /* opcional */
+    z-index: 40; /* por debajo del MusicPlayer (que está en 50 o 100) */
 }
 .navLinks{
     display: flex;

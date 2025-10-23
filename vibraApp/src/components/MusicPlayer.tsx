@@ -1,218 +1,188 @@
-import { useEffect, useRef, useState } from "react";
-import "./MusicPlayer.css";
-import { useMusicContext } from '../context';
+import { useEffect, useMemo, useRef, useState } from "react";
+import YouTube from "react-youtube";
+import type { YouTubeEvent } from "react-youtube";
+import { useMusicContext } from "../context/MusicContext";
+import './MusicPlayer.css';
 
-function formatTime(totalSeconds: number) {
-  const sec = Math.max(0, Math.floor(totalSeconds || 0));
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  const s = sec % 60;
-  const mm = h > 0 ? String(m).padStart(2, "0") : String(m);
-  const ss = String(s).padStart(2, "0");
-  return h > 0 ? `${h}:${mm}:${ss}` : `${m}:${ss}`;
-}
 
-export function MusicPlayer() {
-  // Conectar con el MusicContext
+/**
+ * MusicPlayer — mantiene la lógica actual (3 iframes YouTube hidden, prev/cur/next,
+ * progreso, volumen, etc.) pero renderiza con el HTML/clases que pediste.
+ */
+export default function MusicPlayer() {
   const {
-    currentSong,
-    nextSong,
-    prevSong,
-    isPlaying: contextIsPlaying,
-    togglePlayPause: contextTogglePlayPause
+    youtubeIdPrev: youtubeIdAnterior,
+    youtubeIdCurrent: youtubeIdActual,
+    youtubeIdNext: youtubeIdSiguiente,
+    playlistName: nombrePlaylist,
+    playlistSongs,
+    imageLinks: urlsImagenes,
+    setCurrentIndex: setIndiceActual,
   } = useMusicContext();
 
-  /** Audio element ref */
+  // Utilidades derivadas
+  const idsCanciones = useMemo(() => playlistSongs.map((t) => t.youtubeId), [playlistSongs]);
+  const currentIndex = useMemo(() => {
+    const id = youtubeIdActual ?? "";
+    return Math.max(0, idsCanciones.indexOf(id));
+  }, [youtubeIdActual, idsCanciones]);
+
+  const track = playlistSongs[currentIndex] || null;
+  const trackThumb = track?.imageUrl || urlsImagenes[currentIndex % Math.max(1, urlsImagenes.length)] || "";
+  const trackTitle = track?.title || youtubeIdActual || "Sin selección";
+  const trackAuthor = track?.artist || nombrePlaylist || "Playlist";
+
+  // Refs de players YouTube
+  const prevRef = useRef<YouTubePlayer | null>(null);
+  const curRef = useRef<YouTubePlayer | null>(null);
+  const nextRef = useRef<YouTubePlayer | null>(null);
+
+  // Ref de <audio> (maqueta solicitada; no controla reproducción)
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  /** Estado de reproducción y metadatos */
+  // Estado UI
   const [isPlaying, setIsPlaying] = useState(false);
-  const [duration, setDuration] = useState(0);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [volume, setVolume] = useState(1); // 0.0 a 1.0 (100%)
+  const [duration, setDuration] = useState(0); // seg
+  const [currentTime, setCurrentTime] = useState(0); // seg
+
+  // Volumen (UI en 0..1) y mute, pero player usa 0..100
+  const [volume01, setVolume01] = useState(0.7); // slider 0..1
   const [isMuted, setIsMuted] = useState(false);
-  const [previousVolume, setPreviousVolume] = useState(1); // Para restaurar al desmutear
+  const volume100 = Math.round((isMuted ? 0 : volume01) * 100);
+  const volumePercentage = Math.round(volume01 * 100);
 
-  /** Info visual (título / canal / miniatura) */
-  const [trackTitle, setTrackTitle] = useState("Selecciona una canción");
-  const [trackAuthor, setTrackAuthor] = useState("");
-  const [trackThumb, setTrackThumb] = useState<string>("");
-
-  /** useEffect que escucha cambios en currentSong del Context (SOLO cuando cambia la canción) */
+  // Sincroniza volumen en el player actual
   useEffect(() => {
-    if (!currentSong || !audioRef.current) {
-      return;
-    }
+    curRef.current?.setVolume?.(volume100);
+  }, [volume100]);
 
-    // Actualizar la info visual
-    setTrackTitle(currentSong.title);
-    setTrackAuthor(currentSong.artist);
-
-    // Obtener thumbnail de YouTube (si existe)
-    if (currentSong.youtubeId) {
-      const thumbUrl = `https://img.youtube.com/vi/${currentSong.youtubeId}/hqdefault.jpg`;
-      setTrackThumb(thumbUrl);
-    }
-
-    // Solo usar Cloudinary URL
-    if (!currentSong.cloudinaryUrl) {
-      console.error('No hay URL de Cloudinary para esta canción');
-      return;
-    }
-
-    audioRef.current.src = currentSong.cloudinaryUrl;
-    audioRef.current.load();
-
-    // Solo reproducir si el contexto indica que debe reproducirse
-    if (contextIsPlaying) {
-      audioRef.current.play().catch((error) => {
-        console.error('Error al reproducir:', error);
-      });
-    } else {
-      audioRef.current.pause();
-    }
-
-  }, [currentSong]); // Solo depende de currentSong, NO de contextIsPlaying
-
-  /** useEffect separado para manejar play/pause sin recargar la canción */
+  // Intervalo de progreso cuando está reproduciendo
   useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio || !currentSong) return;
+    if (!isPlaying) return;
+    const h = setInterval(() => {
+      const t = curRef.current?.getCurrentTime?.() ?? 0;
+      const d = curRef.current?.getDuration?.() ?? 0;
+      setCurrentTime(t);
+      if (Number.isFinite(d) && d > 0) setDuration(d);
+    }, 250);
+    return () => clearInterval(h);
+  }, [isPlaying]);
 
-    if (contextIsPlaying) {
-      audio.play().catch((error) => {
-        console.error('Error al reproducir:', error);
-      });
-    } else {
-      audio.pause();
-    }
-  }, [contextIsPlaying, currentSong]);
-
-  /** Sincronizar estado local con el contexto cuando cambia la canción */
+  // Cargar videos en los 3 players cuando cambien los IDs
   useEffect(() => {
-    setIsPlaying(contextIsPlaying);
-  }, [currentSong, contextIsPlaying]);
-
-  /** Sincronizar volumen con el audio element */
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    audio.volume = volume;
-    audio.muted = isMuted;
-  }, [volume, isMuted]);
-
-  /** Event handlers para el audio element */
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const handleLoadedMetadata = () => {
-      setDuration(audio.duration);
-    };
-
-    const handleTimeUpdate = () => {
-      setCurrentTime(audio.currentTime);
-    };
-
-    const handlePlay = () => {
-      setIsPlaying(true);
-    };
-
-    const handlePause = () => {
-      setIsPlaying(false);
-    };
-
-    const handleEnded = () => {
-      setIsPlaying(false);
-      nextSong();
-    };
-
-    const handleError = (e: Event) => {
-      const target = e.target as HTMLAudioElement;
-      if (target.error) {
-        console.error('Audio error:', target.error.code, target.error.message);
+    try {
+      if (prevRef.current && youtubeIdAnterior) prevRef.current.cueVideoById({ videoId: youtubeIdAnterior });
+      if (nextRef.current && youtubeIdSiguiente) nextRef.current.cueVideoById({ videoId: youtubeIdSiguiente });
+      if (curRef.current && youtubeIdActual) {
+        curRef.current.cueVideoById({ videoId: youtubeIdActual });
+        setTimeout(() => {
+          if (isPlaying) curRef.current?.playVideo?.();
+          else curRef.current?.pauseVideo?.();
+        }, 150);
+        setCurrentTime(0);
+        const d = curRef.current.getDuration?.() ?? 0;
+        if (Number.isFinite(d) && d > 0) setDuration(d);
       }
-    };
+    } catch {}
+  }, [youtubeIdAnterior, youtubeIdActual, youtubeIdSiguiente, isPlaying]);
 
-    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
-    audio.addEventListener('timeupdate', handleTimeUpdate);
-    audio.addEventListener('play', handlePlay);
-    audio.addEventListener('pause', handlePause);
-    audio.addEventListener('ended', handleEnded);
-    audio.addEventListener('error', handleError);
+  // Handlers onReady/onStateChange
+  const onReady = (which: "prev" | "cur" | "next") => (e: YouTubeEvent) => {
+    const player = e.target as unknown as YouTubePlayer;
+    if (which === "prev") prevRef.current = player;
+    if (which === "cur") {
+      curRef.current = player;
+      player.setVolume(volume100);
+    }
+    if (which === "next") nextRef.current = player;
+  };
 
-    return () => {
-      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
-      audio.removeEventListener('timeupdate', handleTimeUpdate);
-      audio.removeEventListener('play', handlePlay);
-      audio.removeEventListener('pause', handlePause);
-      audio.removeEventListener('ended', handleEnded);
-      audio.removeEventListener('error', handleError);
-    };
-  }, [nextSong]);
+  const onStateChange = (e: YouTubeEvent) => {
+    const state = e.target.getPlayerState?.(); // 0 ENDED, 1 PLAY, 2 PAUSE
+    if (state === 1) setIsPlaying(true);
+    if (state === 2) setIsPlaying(false);
+    if (state === 0) nextSong();
+  };
 
+  // Controles (mapeados a nombres pedidos en el HTML)
+  const play = () => {
+    curRef.current?.playVideo?.();
+    setIsPlaying(true);
+  };
+  const pause = () => {
+    curRef.current?.pauseVideo?.();
+    setIsPlaying(false);
+  };
   const togglePlayPause = () => {
-    const audio = audioRef.current;
-    if (!audio || !audio.src) {
-      return;
-    }
-
-    contextTogglePlayPause();
-
-    if (audio.paused) {
-      audio.play().catch((error) => {
-        console.error('Error al reproducir:', error);
-      });
-    } else {
-      audio.pause();
-    }
+    isPlaying ? pause() : play();
   };
+  const nextSong = () => setIndiceActual(currentIndex + 1);
+  const prevSong = () => setIndiceActual(currentIndex - 1);
 
+  // Seek por click en la barra de progreso
   const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
-    const audio = audioRef.current;
-    if (!audio || !duration) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const pct = Math.min(1, Math.max(0, x / rect.width));
-    const newTime = pct * duration;
-    audio.currentTime = newTime;
-    setCurrentTime(newTime);
+    const trackEl = e.currentTarget.getBoundingClientRect();
+    const ratio = Math.min(1, Math.max(0, (e.clientX - trackEl.left) / trackEl.width));
+    const sec = (duration || 0) * ratio;
+    curRef.current?.seekTo?.(sec, true);
+    setCurrentTime(sec);
   };
 
+  // Volumen (slider 0..1)
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newVolume = parseFloat(e.target.value);
-    setVolume(newVolume);
-    if (newVolume > 0 && isMuted) {
-      setIsMuted(false);
-    }
+    const v = Math.min(1, Math.max(0, Number(e.target.value)));
+    setVolume01(v);
+    if (isMuted && v > 0) setIsMuted(false);
   };
-
   const toggleMute = () => {
     if (isMuted) {
-      // Desmutear: restaurar volumen anterior
       setIsMuted(false);
-      setVolume(previousVolume);
+      curRef.current?.setVolume?.(Math.round(volume01 * 100));
     } else {
-      // Mutear: guardar volumen actual y silenciar
-      setPreviousVolume(volume);
       setIsMuted(true);
-      setVolume(0);
+      curRef.current?.setVolume?.(0);
     }
   };
 
-  const progress = duration ? (currentTime / duration) * 100 : 0;
-  const volumePercentage = Math.round(volume * 100);
+  // Utils UI
+  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const formatTime = (s: number) => {
+    const m = Math.floor(s / 60).toString();
+    const ss = Math.floor(s % 60).toString().padStart(2, "0");
+    return `${m}:${ss}`;
+  };
+
+  // Opciones para los iframes (ocultos)
+  const opts = useMemo(
+    () => ({
+      height: "0",
+      width: "0",
+      playerVars: {
+        autoplay: 0,
+        controls: 0,
+        rel: 0,
+        disablekb: 1,
+        fs: 0,
+        iv_load_policy: 3,
+        modestbranding: 1,
+      },
+    }),
+    []
+  );
 
   return (
     <>
       {/* Audio element (oculto, controlado por JS) */}
-      <audio
-        ref={audioRef}
-        preload="auto"
-        style={{ display: 'none' }}
-      />
+      <audio ref={audioRef} preload="auto" style={{ display: "none" }} />
 
-      {/* UI del reproductor */}
+      {/* Hidden YouTube players para la lógica actual */}
+      <div style={{ display: "none" }} aria-hidden>
+        <YouTube videoId={youtubeIdAnterior ?? ""} opts={opts} onReady={onReady("prev")} onStateChange={onStateChange} />
+        <YouTube videoId={youtubeIdActual ?? ""} opts={opts} onReady={onReady("cur")} onStateChange={onStateChange} />
+        <YouTube videoId={youtubeIdSiguiente ?? ""} opts={opts} onReady={onReady("next")} onStateChange={onStateChange} />
+      </div>
+
+      {/* UI del reproductor con tu maquetado/clases */}
       <div className="MusicPlayer__MainContainer">
         <nav className="MusicPlayer__LeftNav">
           <div className="MusicPlayer__albumArtContainer">
@@ -296,14 +266,14 @@ export function MusicPlayer() {
               title={isMuted ? "Activar sonido" : "Silenciar"}
               aria-label={isMuted ? "Activar sonido" : "Silenciar"}
             >
-              {isMuted || volume === 0 ? "🔇" : volume < 0.5 ? "🔉" : "🔊"}
+              {isMuted || volume01 === 0 ? "🔇" : volume01 < 0.5 ? "🔉" : "🔊"}
             </button>
             <input
               type="range"
               min="0"
               max="1"
               step="0.01"
-              value={volume}
+              value={volume01}
               onChange={handleVolumeChange}
               className="MusicPlayer__volumeSlider"
               title={`Volumen: ${volumePercentage}%`}
