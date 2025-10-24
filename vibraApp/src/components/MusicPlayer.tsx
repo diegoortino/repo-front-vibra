@@ -13,50 +13,9 @@
 // - Overlay visualizador: cubre pantalla excepto el reproductor, slide cada 5s, pausa con la música, permanece abierto al cambiar pista
 // - Nombres de variables/funciones en español
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import "./MusicPlayer.css";
-// Nota: implementaremos luego el MusicContext. Por ahora tipamos la interfaz básica:
-
-type MusicContextShape = {
-  idsCanciones: string[];
-  indiceActual: number;
-  setIndiceActual: (n: number) => void;
-  urlsImagenes: string[];
-  nombrePlaylist?: string;
-  reproduciendo: boolean;
-  setReproduciendo: (v: boolean) => void;
-};
-
-// Placeholder temporal hasta integrar el verdadero contexto.
-// Reemplazar por: import { useMusicContext } from "../context";
-const useMusicContext = (): MusicContextShape => {
-  // Para que el componente sea copiable y probable, colocamos un estado de prueba.
-  const [ids] = useState<string[]>([
-    "Zi_XLOBDo_Y", // ejemplo 1 (Rick Astley :D)
-    "3JZ_D3ELwOQ", // ejemplo 2
-    "dQw4w9WgXcQ", // ejemplo 3
-  ]);
-  const [indiceActual, setIndiceActual] = useState(0);
-  const [reproduciendo, setReproduciendo] = useState(false);
-  const urlsImagenes = useMemo(
-    () => [
-      "https://images.unsplash.com/photo-1511379938547-c1f69419868d",
-      "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4",
-      "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?ixid=2",
-      "https://images.unsplash.com/photo-1513863326155-6ebcf83f9725",
-    ],
-    []
-  );
-  return {
-    idsCanciones: ids,
-    indiceActual,
-    setIndiceActual,
-    urlsImagenes,
-    nombrePlaylist: "Demo Playlist",
-    reproduciendo,
-    setReproduciendo,
-  };
-};
+import { useMusicContext } from "../context/MusicContext";
 
 // Tipos globales mínimos para la IFrame API
 declare global {
