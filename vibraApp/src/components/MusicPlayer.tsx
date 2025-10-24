@@ -13,7 +13,7 @@
 // - Overlay visualizador: cubre pantalla excepto el reproductor, slide cada 5s, pausa con la música, permanece abierto al cambiar pista
 // - Nombres de variables/funciones en español
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import "./MusicPlayer.css";
 import { useMusicContext } from "../context/MusicContext";
 
@@ -37,6 +37,43 @@ const segundosAmmss = (s: number): string => {
 
 const obtenerMiniatura = (id?: string) =>
   id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : "";
+
+const PATRON_ID_YOUTUBE = /^[a-zA-Z0-9_-]{11}$/;
+
+const extraerIdYoutube = (valor?: string): string | null => {
+  if (!valor) return null;
+  const limpio = valor.trim();
+  if (PATRON_ID_YOUTUBE.test(limpio)) return limpio;
+
+  try {
+    const url = new URL(limpio);
+    const candidatoQuery = url.searchParams.get("v");
+    if (candidatoQuery && PATRON_ID_YOUTUBE.test(candidatoQuery)) {
+      return candidatoQuery;
+    }
+
+    const segmentos = url.pathname
+      .split("/")
+      .map((segmento) => segmento.trim())
+      .filter(Boolean);
+    const ultimoSegmento = segmentos[segmentos.length - 1];
+    if (ultimoSegmento && PATRON_ID_YOUTUBE.test(ultimoSegmento)) {
+      return ultimoSegmento;
+    }
+  } catch (_) {
+    // No era una URL; intentaremos extraer un patrón válido más abajo
+  }
+
+  const coincidenciaLibre = limpio.match(/[a-zA-Z0-9_-]{11}/);
+  if (coincidenciaLibre && coincidenciaLibre[0]) {
+    return coincidenciaLibre[0];
+  }
+
+  return null;
+};
+
+const esIdYoutubeValido = (valor?: string | null): valor is string =>
+  !!valor && PATRON_ID_YOUTUBE.test(valor);
 
 // Constantes de estilo/UX
 const SALTO_SEGUNDOS = 5;
@@ -81,10 +118,35 @@ export default function MusicPlayer() {
   const [urlImagenActual, setUrlImagenActual] = useState<string>(urlsImagenes[0] || "");
   const intervaloSlideRef = useRef<number | null>(null);
 
-  // IDs calculados según el índice actual
-  const idActual = idsCanciones[indiceActual];
-  const idAnterior = indiceActual > 0 ? idsCanciones[indiceActual - 1] : undefined;
-  const idSiguiente = indiceActual < idsCanciones.length - 1 ? idsCanciones[indiceActual + 1] : undefined;
+  const obtenerIdEnIndice = useCallback(
+    (indice: number | undefined): string | null => {
+      if (indice === undefined || indice < 0 || indice >= idsCanciones.length) {
+        return null;
+      }
+      return extraerIdYoutube(idsCanciones[indice]);
+    },
+    [idsCanciones]
+  );
+
+  const buscarIndiceValido = useCallback(
+    (desde: number, direccion: 1 | -1): number | null => {
+      let indice = desde + direccion;
+      while (indice >= 0 && indice < idsCanciones.length) {
+        if (esIdYoutubeValido(obtenerIdEnIndice(indice))) {
+          return indice;
+        }
+        indice += direccion;
+      }
+      return null;
+    },
+    [idsCanciones, obtenerIdEnIndice]
+  );
+
+  // IDs calculados según el índice actual (sanitizados)
+  const idActual = obtenerIdEnIndice(indiceActual) || undefined;
+  const idAnterior = obtenerIdEnIndice(indiceActual > 0 ? indiceActual - 1 : undefined) || undefined;
+  const idSiguiente =
+    obtenerIdEnIndice(indiceActual < idsCanciones.length - 1 ? indiceActual + 1 : undefined) || undefined;
 
   // Cargar la API de YouTube una sola vez
   useEffect(() => {
@@ -105,6 +167,36 @@ export default function MusicPlayer() {
       if (window.onYouTubeIframeAPIReady) delete window.onYouTubeIframeAPIReady;
     };
   }, []);
+
+  // Si el ID actual es inválido, intentamos saltar a uno válido automáticamente
+  useEffect(() => {
+    if (idsCanciones.length === 0) return;
+    if (esIdYoutubeValido(idActual)) return;
+
+    const siguienteValido = buscarIndiceValido(indiceActual, 1);
+    if (siguienteValido !== null && siguienteValido !== indiceActual) {
+      setIndiceActual(siguienteValido);
+      return;
+    }
+
+    const anteriorValido = buscarIndiceValido(indiceActual, -1);
+    if (anteriorValido !== null && anteriorValido !== indiceActual) {
+      setIndiceActual(anteriorValido);
+      return;
+    }
+
+    if (reproduciendo) {
+      setReproduciendo(false);
+    }
+  }, [
+    buscarIndiceValido,
+    idActual,
+    idsCanciones,
+    indiceActual,
+    reproduciendo,
+    setIndiceActual,
+    setReproduciendo,
+  ]);
 
   // Crear / recrear players cuando la API esté disponible y los contenedores existan
   useEffect(() => {
@@ -333,14 +425,18 @@ export default function MusicPlayer() {
   };
 
   const manejarSiguiente = () => {
-    if (indiceActual < idsCanciones.length - 1) {
-      setIndiceActual(indiceActual + 1);
+    const siguienteValido = buscarIndiceValido(indiceActual, 1);
+    if (siguienteValido !== null) {
+      setIndiceActual(siguienteValido);
+    } else {
+      setReproduciendo(false);
     }
   };
 
   const manejarAnterior = () => {
-    if (indiceActual > 0) {
-      setIndiceActual(indiceActual - 1);
+    const anteriorValido = buscarIndiceValido(indiceActual, -1);
+    if (anteriorValido !== null) {
+      setIndiceActual(anteriorValido);
     }
   };
 
@@ -378,7 +474,7 @@ export default function MusicPlayer() {
     if (v > 0 && muteado) setMuteado(false);
   };
 
-  const portadaActual = obtenerMiniatura(idActual);
+  const portadaActual = obtenerMiniatura(idActual || undefined);
 
   // Estado vacío
   if (!idsCanciones || idsCanciones.length === 0) {
