@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { ChangeEvent, CSSProperties } from "react";
 import "./MusicPlayer.css";
 
 declare global {
@@ -108,9 +109,9 @@ export function MusicPlayer() {
   const idIntervaloProgresoRef = useRef<number | null>(null);
 
   /* ===== Volumen + mute dinámico ===== */
-  const [volumen, setVolumen] = useState(0.8);     // 0..1
-  const [muted, setMuted] = useState(false);       // estado visual/control
-  const prevVolRef = useRef(0.8);                  // para restaurar post-mute
+  const [volumen, setVolumen] = useState(0.8); // 0..1
+  const [muted, setMuted] = useState(false); // estado visual/control
+  const prevVolRef = useRef(0.8); // para restaurar post-mute
 
   // Aplica volumen/mute al player cuando cambien
   useEffect(() => {
@@ -127,10 +128,13 @@ export function MusicPlayer() {
     }
   }, [volumen, muted]);
 
-  const onCambiarVolumen = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onCambiarVolumen = (e: ChangeEvent<HTMLInputElement>) => {
     const v = Number(e.target.value);
     const clamped = Math.min(1, Math.max(0, isNaN(v) ? 0 : v));
     setVolumen(clamped);
+    if (clamped > 0) {
+      prevVolRef.current = clamped;
+    }
     // si el usuario sube el volumen por encima de 0, desmuteamos visualmente
     if (clamped > 0 && muted) setMuted(false);
     if (clamped === 0 && !muted) setMuted(true);
@@ -183,28 +187,53 @@ export function MusicPlayer() {
   const [indiceImagen, setIndiceImagen] = useState(0);
   const indicePrevioRef = useRef(0);
   const [animandoSlide, setAnimandoSlide] = useState(false);
+  const animacionTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (!mostrarVisualizador) return;
-    if (!estaReproduciendo) return;
-    if (imagenesEfectivas.length < 2) return;
+    if (!mostrarVisualizador) {
+      setAnimandoSlide(false);
+      if (animacionTimeoutRef.current != null) {
+        window.clearTimeout(animacionTimeoutRef.current);
+        animacionTimeoutRef.current = null;
+      }
+      return;
+    }
 
-    const id = window.setInterval(() => {
+    if (!duracion || !imagenesEfectivas.length) return;
+
+    const totalImagenes = imagenesEfectivas.length;
+    const progresoCancion = duracion ? Math.min(1, Math.max(0, tiempoActual / duracion)) : 0;
+    const indiceCalculado = Math.min(totalImagenes - 1, Math.floor(progresoCancion * totalImagenes));
+
+    if (indiceCalculado !== indiceImagen) {
+      indicePrevioRef.current = indiceImagen;
       setAnimandoSlide(true);
-      setIndiceImagen((idxAnterior) => {
-        indicePrevioRef.current = idxAnterior;
-        return (idxAnterior + 1) % imagenesEfectivas.length;
-      });
-      window.setTimeout(() => setAnimandoSlide(false), 450);
-    }, 5000);
+      setIndiceImagen(indiceCalculado);
 
-    return () => clearInterval(id);
-  }, [mostrarVisualizador, estaReproduciendo, imagenesEfectivas.length]);
+      if (animacionTimeoutRef.current != null) {
+        window.clearTimeout(animacionTimeoutRef.current);
+      }
+      animacionTimeoutRef.current = window.setTimeout(() => {
+        setAnimandoSlide(false);
+        animacionTimeoutRef.current = null;
+      }, 420) as unknown as number;
+    }
+  }, [duracion, imagenesEfectivas.length, indiceImagen, mostrarVisualizador, tiempoActual]);
 
   useEffect(() => {
     setIndiceImagen(0);
     indicePrevioRef.current = 0;
+    if (animacionTimeoutRef.current != null) {
+      window.clearTimeout(animacionTimeoutRef.current);
+      animacionTimeoutRef.current = null;
+    }
   }, [indiceActual]);
+
+  useEffect(() => () => {
+    if (animacionTimeoutRef.current != null) {
+      window.clearTimeout(animacionTimeoutRef.current);
+    }
+  }, []);
 
   useEffect(() => {
     if (!mostrarVisualizador) return;
@@ -221,7 +250,12 @@ export function MusicPlayer() {
   useEffect(() => {
     let desmontado = false;
     (async () => {
-      await cargarAPIYouTube();
+      try {
+        await cargarAPIYouTube();
+      } catch (error) {
+        console.error("No se pudo cargar la API de YouTube", error);
+        return;
+      }
       if (desmontado) return;
 
       reproductorRef.current = new window.YT.Player(hostReproductorRef.current!, {
@@ -232,7 +266,9 @@ export function MusicPlayer() {
         events: {
           onReady: (e: any) => {
             const d = e.target.getDuration?.() || 0;
-            if (d) setDuracion(d);
+            setDuracion(d);
+            const t = e.target.getCurrentTime?.() || 0;
+            setTiempoActual(t);
             // aplicar estado de volumen/mute inicial
             const vol0a100 = Math.round((muted ? 0 : volumen) * 100);
             if (muted || vol0a100 <= 0) { e.target.mute?.(); e.target.setVolume?.(0); }
@@ -282,14 +318,22 @@ export function MusicPlayer() {
     const idx = (nuevoIndice + total) % total;
     setIndiceActual(idx);
     setTiempoActual(0);
+    setDuracion(0);
 
-    reproductorRef.current?.loadVideoById?.(LISTA_REPRODUCCION[idx].id);
-    if (!autoplay) reproductorRef.current?.pauseVideo?.();
+    const video = LISTA_REPRODUCCION[idx].id;
+    const player = reproductorRef.current;
+    if (player) {
+      if (autoplay) {
+        player.loadVideoById?.(video);
+      } else {
+        player.cueVideoById?.(video);
+        player.pauseVideo?.();
+      }
+    }
     actualizarMetadatos(idx);
   }
 
   const pistaSiguiente = (autoplay = true) => cambiarPista(indiceActual + 1, autoplay);
-  const pistaAnterior = (autoplay = true) => cambiarPista(indiceActual - 1, autoplay);
 
   const alternarPlayPause = () => {
     const p = reproductorRef.current;
@@ -300,7 +344,7 @@ export function MusicPlayer() {
     else p.playVideo?.();
   };
 
-  const onCambiarProgreso = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onCambiarProgreso = (e: ChangeEvent<HTMLInputElement>) => {
     const v = Number(e.target.value) || 0;
     const nuevo = Math.min(1, Math.max(0, v));
     const segundos = (duracion || 0) * nuevo;
@@ -313,6 +357,7 @@ export function MusicPlayer() {
       const videoId = LISTA_REPRODUCCION[idx].id;
       const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
       const resp = await fetch(oembedUrl);
+      if (!resp.ok) throw new Error(`Respuesta ${resp.status}`);
       const data = await resp.json();
       setTituloPista(data.title || "Sin título");
       setAutorPista(data.author_name || "");
@@ -330,6 +375,14 @@ export function MusicPlayer() {
   }, [indiceActual]);
 
   const progreso = duracion ? Math.min(1, Math.max(0, tiempoActual / duracion)) : 0;
+  const estiloBarraProgreso = useMemo(
+    () => ({ "--mp-progreso": `${(progreso * 100).toFixed(2)}%` }) as CSSProperties,
+    [progreso]
+  );
+  const estiloBarraVolumen = useMemo(
+    () => ({ "--mp-progreso": `${(volumen * 100).toFixed(2)}%` }) as CSSProperties,
+    [volumen]
+  );
 
   return (
     <>
@@ -403,6 +456,7 @@ export function MusicPlayer() {
               onChange={onCambiarProgreso}
               className="Reproductor__BarraProgreso"
               aria-label="Barra de progreso"
+              style={estiloBarraProgreso}
             />
             <div className="Reproductor__Tiempo Reproductor__TiempoTotal">{formatearTiempo(duracion)}</div>
           </div>
@@ -430,6 +484,7 @@ export function MusicPlayer() {
             value={volumen}
             onChange={onCambiarVolumen}
             aria-label="Control de volumen"
+            style={estiloBarraVolumen}
           />
 
           <div className="Reproductor__ControlLista" title="Lista" aria-hidden="true"><Icon.List /></div>
