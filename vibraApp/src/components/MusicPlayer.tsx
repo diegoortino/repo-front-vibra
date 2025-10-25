@@ -1,6 +1,27 @@
+/**
+ * Componente central del reproductor.
+ *
+ * El objetivo del refactor es ordenar el archivo y documentar cada parte del flujo para
+ * que resulte sencillo seguir cómo se arma el reproductor, cómo se sincronizan los iframes
+ * de YouTube, cómo se controlan los estados internos (volumen, progreso, visualizador, etc.)
+ * y cómo se conectan los callbacks.  La estructura general queda así:
+ *
+ *   1. Dependencias e iconografía.
+ *   2. Valores constantes compartidos (lista de reproducción, imágenes, API de YouTube).
+ *   3. Helpers puros reutilizables.
+ *   4. Definición del componente `MusicPlayer` con secciones claramente comentadas:
+ *        4.1. Referencias persistentes a iframes y valores derivados.
+ *        4.2. Estados de React que disparan re-renders.
+ *        4.3. Efectos de volumen, progreso, polling y visualizador.
+ *        4.4. Callbacks de sincronización entre slots prev/actual/next.
+ *        4.5. Renderizado JSX del reproductor y del visualizador de imágenes.
+ */
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, CSSProperties, MutableRefObject } from "react";
-import { playlistToPlayer, imagelistToPlayer, songToPlayer } from "../context/MusicContext";
+
+import { imagelistToPlayer, playlistToPlayer, songToPlayer } from "../context/MusicContext";
+
 import "./MusicPlayer.css";
 
 declare global {
@@ -51,9 +72,17 @@ const LISTA_REPRODUCCION = playlistToPlayer();
 /** Arreglo de url de imágenes para el visualizador */
 const IMAGENES_VISUALIZADOR = imagelistToPlayer();
 
-/** Precarga básica/templada de iframes */
+/**
+ * Precarga básica/templada de iframes.
+ *
+ * El flujo ideal es:
+ *   1. Si la API ya está disponible devolvemos una promesa resuelta.
+ *   2. Si la API no se ha solicitado aún guardamos la promesa de carga globalmente.
+ *   3. Cuando la API termine de cargar resolvemos la promesa.
+ */
 function cargarAPIYouTube(): Promise<void> {
   if (window.YT && window.YT.Player) return Promise.resolve();
+
   if (!window._ytApiLoadingPromise) {
     window._ytApiLoadingPromise = new Promise<void>((resolver) => {
       const script = document.createElement("script");
@@ -62,9 +91,13 @@ function cargarAPIYouTube(): Promise<void> {
       window.onYouTubeIframeAPIReady = () => resolver();
     });
   }
+
   return window._ytApiLoadingPromise!;
 }
 
+/**
+ * Formatea un tiempo (en segundos) a un string legible mm:ss o hh:mm:ss.
+ */
 function formatearTiempo(segundosTotales: number) {
   const seg = Math.max(0, Math.floor(segundosTotales || 0));
   const h = Math.floor(seg / 3600);
@@ -75,63 +108,122 @@ function formatearTiempo(segundosTotales: number) {
   return h > 0 ? `${h}:${mm}:${ss}` : `${m}:${ss}`;
 }
 
+/**
+ * Tipo de slot que usamos para manejar tres instancias de iframe en paralelo:
+ *   - prev: pista anterior
+ *   - current: pista actual
+ *   - next: pista siguiente
+ */
 type Slot = "prev" | "current" | "next";
 
 export function MusicPlayer() {
+  /* ======================================================================== */
+  /* === 1. REFERENCIAS PERSISTENTES (sobreviven entre renders)            === */
+  /* ======================================================================== */
+
+  /** Referencias a los contenedores HTML donde se montan los iframes. */
   const contenedorAnteriorRef = useRef<HTMLDivElement | null>(null);
   const contenedorActualRef = useRef<HTMLDivElement | null>(null);
   const contenedorSiguienteRef = useRef<HTMLDivElement | null>(null);
 
+  /** Instancias reales de YT.Player (una por slot). */
   const playerAnteriorRef = useRef<any>(null);
   const playerActualRef = useRef<any>(null);
   const playerSiguienteRef = useRef<any>(null);
 
+  /**
+   * Callbacks y referencias auxiliares que necesitamos para coordinar acciones sin
+   * re-renderizar el componente:
+   *   - `pistaSiguienteRef`: callback que avanza a la pista siguiente.
+   *   - `videosObjetivoRef`: mapea cada slot al ID de video que debe mostrar.
+   *   - `autoplayPendienteRef`: indica si debemos reproducir automáticamente tras un cambio.
+   *   - `indiceActualRef`: espejo mutable del índice actual (para eventos externos).
+   *   - `estaReproduciendoRef`: espejo mutable del estado de reproducción.
+   */
   const pistaSiguienteRef = useRef<(autoplay?: boolean) => void>(() => {});
   const videosObjetivoRef = useRef<Record<Slot, string | undefined>>({ prev: undefined, current: undefined, next: undefined });
   const autoplayPendienteRef = useRef(false);
   const indiceActualRef = useRef(0);
   const estaReproduciendoRef = useRef(false);
 
-  /** === Nuevo: ID inicial desde songToPlayer() === */
-  const INICIO = songToPlayer(); // { id: string }
-  const INDICE_INICIAL_EN_LISTA = LISTA_REPRODUCCION.findIndex(v => v?.id === INICIO?.id);
-  const INDICE_INICIAL = INDICE_INICIAL_EN_LISTA >= 0 ? INDICE_INICIAL_EN_LISTA : 0;
+  /**
+   * Valores iniciales provenientes del contexto: `songToPlayer` nos da la pista inicial.
+   * Calculamos la posición dentro de la lista y almacenamos un override temporal para que
+   * el primer iframe cargue exactamente ese ID aunque la lista cambie posteriormente.
+   */
+  const inicioContexto = songToPlayer();
+  const indiceInicialEnLista = LISTA_REPRODUCCION.findIndex((entrada) => entrada?.id === inicioContexto?.id);
+  const indiceInicial = indiceInicialEnLista >= 0 ? indiceInicialEnLista : 0;
+  const idInicialOverrideRef = useRef<string | null>(inicioContexto?.id || null);
 
-  /** Override solo para el PRIMER cargado del iframe "current" */
-  const idInicialOverrideRef = useRef<string | null>(INICIO?.id || null);
+  /** Identificador del intervalo usado para actualizar el progreso con polling. */
+  const idIntervaloProgresoRef = useRef<number | null>(null);
 
+  /** Cache in-memory de imágenes precargadas para el visualizador. */
+  const cacheImagenesRef = useRef<Map<string, HTMLImageElement>>(new Map());
 
+  /** Control de timeout para la animación del slider en el visualizador. */
+  const animacionTimeoutRef = useRef<number | null>(null);
+
+  /** Guardamos el índice anterior (en el visualizador) para animaciones. */
+  const indicePrevioRef = useRef(0);
+
+  /* ======================================================================== */
+  /* === 2. ESTADOS REACTIVOS (disparan re-render)                          === */
+  /* ======================================================================== */
+
+  /** Índice actual dentro de la lista de reproducción. */
   const [indiceActual, setIndiceActual] = useState(0);
+
+  /**
+   * Estados derivados de la reproducción: si el player actual está sonando, duración total
+   * y tiempo transcurrido (ambos en segundos).
+   */
   const [estaReproduciendo, setEstaReproduciendo] = useState(false);
   const [duracion, setDuracion] = useState(0);
   const [tiempoActual, setTiempoActual] = useState(0);
 
+  /**
+   * Metadatos de la pista actual (obtenidos vía oEmbed): título, autor y miniatura.
+   */
   const [tituloPista, setTituloPista] = useState("Cargando...");
   const [autorPista, setAutorPista] = useState("");
   const [miniaturaPista, setMiniaturaPista] = useState<string>("");
 
-  const idIntervaloProgresoRef = useRef<number | null>(null);
-
-  /* ===== Volumen + mute dinámico ===== */
-  const [volumen, setVolumen] = useState(0.8); // 0..1
-  const [muted, setMuted] = useState(false); // estado visual/control
-  const prevVolRef = useRef(0.8); // para restaurar post-mute
+  /**
+   * Estados y refs derivados del control de volumen/mute.  El rango es 0..1 porque lo
+   * utilizamos directamente en los sliders `<input type="range">`.
+   */
+  const [volumen, setVolumen] = useState(0.8);
+  const [muted, setMuted] = useState(false);
+  const prevVolRef = useRef(0.8);
   const volumenRef = useRef(volumen);
   const mutedRef = useRef(muted);
 
-  // Aplica volumen/mute al player cuando cambien
+  /**
+   * Estados del visualizador de imágenes (overlay con transiciones).
+   */
+  const [mostrarVisualizador, setMostrarVisualizador] = useState(false);
+  const [indiceImagen, setIndiceImagen] = useState(0);
+  const [animandoSlide, setAnimandoSlide] = useState(false);
+
+  /* ======================================================================== */
+  /* === 3. EFECTOS RELACIONADOS CON EL VOLUMEN ============================ */
+  /* ======================================================================== */
+
   useEffect(() => {
     const players = [playerAnteriorRef.current, playerActualRef.current, playerSiguienteRef.current];
     const vol0a100 = Math.round(volumen * 100);
 
-    players.forEach((p) => {
-      if (!p || typeof p.setVolume !== "function") return;
+    players.forEach((player) => {
+      if (!player || typeof player.setVolume !== "function") return;
+
       if (muted || vol0a100 <= 0) {
-        p.mute?.();
-        p.setVolume?.(0);
+        player.mute?.();
+        player.setVolume?.(0);
       } else {
-        p.unMute?.();
-        p.setVolume?.(vol0a100);
+        player.unMute?.();
+        player.setVolume?.(vol0a100);
       }
     });
   }, [volumen, muted]);
@@ -144,53 +236,63 @@ export function MusicPlayer() {
     mutedRef.current = muted;
   }, [muted]);
 
+  /* ======================================================================== */
+  /* === 4. EFECTOS Y CALLBACKS DEL POLLING DE PROGRESO ==================== */
+  /* ======================================================================== */
+
   const iniciarPollingProgreso = () => {
     if (idIntervaloProgresoRef.current != null) return;
+
     idIntervaloProgresoRef.current = window.setInterval(() => {
-      const p = playerActualRef.current;
-      if (!p) return;
-      const t = p.getCurrentTime?.() || 0;
-      const d = p.getDuration?.() || duracion;
-      setTiempoActual(t);
-      if (d && d !== duracion) setDuracion(d);
+      const playerActual = playerActualRef.current;
+      if (!playerActual) return;
+
+      const tiempo = playerActual.getCurrentTime?.() || 0;
+      const duracionActual = playerActual.getDuration?.() || duracion;
+
+      setTiempoActual(tiempo);
+      if (duracionActual && duracionActual !== duracion) setDuracion(duracionActual);
     }, 250) as unknown as number;
   };
+
   const detenerPollingProgreso = () => {
-    if (idIntervaloProgresoRef.current != null) {
-      clearInterval(idIntervaloProgresoRef.current);
-      idIntervaloProgresoRef.current = null;
-    }
+    if (idIntervaloProgresoRef.current == null) return;
+    clearInterval(idIntervaloProgresoRef.current);
+    idIntervaloProgresoRef.current = null;
   };
 
-  const onCambiarVolumen = (e: ChangeEvent<HTMLInputElement>) => {
-    const v = Number(e.target.value);
-    const clamped = Math.min(1, Math.max(0, isNaN(v) ? 0 : v));
+  /* ======================================================================== */
+  /* === 5. HANDLERS DE VOLUMEN, MUTE Y CONTROLES MANUALES ================= */
+  /* ======================================================================== */
+
+  const onCambiarVolumen = (event: ChangeEvent<HTMLInputElement>) => {
+    const valor = Number(event.target.value);
+    const clamped = Math.min(1, Math.max(0, Number.isNaN(valor) ? 0 : valor));
+
     setVolumen(clamped);
+
     if (clamped > 0) {
       prevVolRef.current = clamped;
     }
-    // si el usuario sube el volumen por encima de 0, desmuteamos visualmente
+
     if (clamped > 0 && muted) setMuted(false);
     if (clamped === 0 && !muted) setMuted(true);
   };
 
   const alternarMute = () => {
-    setMuted((m) => {
-      if (m) {
-        // unmute: restaurar volumen previo (>0) o un default
+    setMuted((mutedActual) => {
+      if (mutedActual) {
         const restore = prevVolRef.current > 0 ? prevVolRef.current : 0.8;
         setVolumen(restore);
         return false;
-      } else {
-        // mute: recordar volumen y bajar a 0
-        prevVolRef.current = volumen;
-        setVolumen(0);
-        return true;
       }
+
+      prevVolRef.current = volumen;
+      setVolumen(0);
+      return true;
     });
   };
 
-  // Elige el icono según volumen/mute
   const VolumeIcon = () => {
     if (muted || volumen === 0) return <Icon.VolMute />;
     if (volumen < 0.34) return <Icon.VolLow />;
@@ -198,11 +300,12 @@ export function MusicPlayer() {
     return <Icon.VolHigh />;
   };
 
-  /* ============== VISUALIZADOR ============== */
-  const [mostrarVisualizador, setMostrarVisualizador] = useState(false);
-  const cacheImagenesRef = useRef<Map<string, HTMLImageElement>>(new Map());
+  /* ======================================================================== */
+  /* === 6. VISUALIZADOR DE IMÁGENES ======================================= */
+  /* ======================================================================== */
+
   const imagenesEfectivas = useMemo(() => {
-    const limpias = IMAGENES_VISUALIZADOR.filter((u) => !!u);
+    const limpias = IMAGENES_VISUALIZADOR.filter((url) => !!url);
     return limpias.length ? limpias : [""];
   }, []);
 
@@ -210,22 +313,20 @@ export function MusicPlayer() {
     imagenesEfectivas.forEach((url) => {
       if (!url) return;
       if (cacheImagenesRef.current.has(url)) return;
+
       const img = new Image();
       img.decoding = "async";
       img.loading = "eager";
       img.src = url;
+
       cacheImagenesRef.current.set(url, img);
     });
   }, [imagenesEfectivas]);
 
-  const [indiceImagen, setIndiceImagen] = useState(0);
-  const indicePrevioRef = useRef(0);
-  const [animandoSlide, setAnimandoSlide] = useState(false);
-  const animacionTimeoutRef = useRef<number | null>(null);
-
   useEffect(() => {
     if (!mostrarVisualizador) {
       setAnimandoSlide(false);
+
       if (animacionTimeoutRef.current != null) {
         window.clearTimeout(animacionTimeoutRef.current);
         animacionTimeoutRef.current = null;
@@ -247,6 +348,7 @@ export function MusicPlayer() {
       if (animacionTimeoutRef.current != null) {
         window.clearTimeout(animacionTimeoutRef.current);
       }
+
       animacionTimeoutRef.current = window.setTimeout(() => {
         setAnimandoSlide(false);
         animacionTimeoutRef.current = null;
@@ -257,6 +359,7 @@ export function MusicPlayer() {
   useEffect(() => {
     setIndiceImagen(0);
     indicePrevioRef.current = 0;
+
     if (animacionTimeoutRef.current != null) {
       window.clearTimeout(animacionTimeoutRef.current);
       animacionTimeoutRef.current = null;
@@ -271,18 +374,27 @@ export function MusicPlayer() {
 
   useEffect(() => {
     if (!mostrarVisualizador) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setMostrarVisualizador(false);
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMostrarVisualizador(false);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, [mostrarVisualizador]);
 
   const abrirVisualizador = () => setMostrarVisualizador(true);
   const cerrarVisualizador = () => setMostrarVisualizador(false);
 
-  /* =========================================== */
+  /* ======================================================================== */
+  /* === 7. FUNCIONES DE SINCRONIZACIÓN ENTRE SLOTS ======================== */
+  /* ======================================================================== */
 
-  const obtenerPlayerPorSlot = (slot: Slot) =>
-    slot === "prev" ? playerAnteriorRef.current : slot === "next" ? playerSiguienteRef.current : playerActualRef.current;
+  const obtenerPlayerPorSlot = (slot: Slot) => {
+    if (slot === "prev") return playerAnteriorRef.current;
+    if (slot === "next") return playerSiguienteRef.current;
+    return playerActualRef.current;
+  };
 
   const normalizarIndice = useCallback((indice: number) => {
     const total = LISTA_REPRODUCCION.length;
@@ -293,6 +405,7 @@ export function MusicPlayer() {
   const sincronizarSlot = useCallback((slot: Slot, reproducir = false) => {
     const player = obtenerPlayerPorSlot(slot);
     const videoId = videosObjetivoRef.current[slot];
+
     if (!player || !videoId) return;
 
     try {
@@ -331,6 +444,7 @@ export function MusicPlayer() {
       };
 
       const debeReproducir = !omitirAutoplay && (autoplayPendienteRef.current || estaReproduciendoRef.current);
+
       sincronizarSlot("prev");
       sincronizarSlot("next");
       sincronizarSlot("current", debeReproducir);
@@ -338,6 +452,7 @@ export function MusicPlayer() {
       if (!debeReproducir) {
         setEstaReproduciendo(false);
       }
+
       autoplayPendienteRef.current = false;
       setTiempoActual(0);
       setDuracion(0);
@@ -345,25 +460,32 @@ export function MusicPlayer() {
     [normalizarIndice, sincronizarSlot]
   );
 
+  /* ======================================================================== */
+  /* === 8. CICLO DE VIDA DE LOS IFRAMES DE YOUTUBE ======================== */
+  /* ======================================================================== */
+
   useEffect(() => {
     let desmontado = false;
 
     const crearPlayer = (slot: Slot, contenedor: HTMLDivElement | null) => {
       if (!contenedor) return;
+
       contenedor.innerHTML = "";
       const host = document.createElement("div");
       contenedor.appendChild(host);
 
-      const manejarEstado = (playerRef: MutableRefObject<any>) => (e: any) => {
-        if (playerRef.current !== e.target) return;
+      const manejarEstado = (playerRef: MutableRefObject<any>) => (event: any) => {
+        if (playerRef.current !== event.target) return;
+
         const ESTADO = window.YT.PlayerState;
-        if (e.data === ESTADO.PLAYING) {
+
+        if (event.data === ESTADO.PLAYING) {
           setEstaReproduciendo(true);
         }
-        if (e.data === ESTADO.PAUSED) {
+        if (event.data === ESTADO.PAUSED) {
           setEstaReproduciendo(false);
         }
-        if (e.data === ESTADO.ENDED) {
+        if (event.data === ESTADO.ENDED) {
           setEstaReproduciendo(false);
           pistaSiguienteRef.current(true);
         }
@@ -374,29 +496,28 @@ export function MusicPlayer() {
         height: 0,
         playerVars: { controls: 0, modestbranding: 1, rel: 0, fs: 0, enablejsapi: 1 },
         events: {
-          onReady: (e: any) => {
+          onReady: (event: any) => {
             const vol0a100 = Math.round((mutedRef.current ? 0 : volumenRef.current) * 100);
+
             if (mutedRef.current || vol0a100 <= 0) {
-              e.target.mute?.();
-              e.target.setVolume?.(0);
+              event.target.mute?.();
+              event.target.setVolume?.(0);
             } else {
-              e.target.unMute?.();
-              e.target.setVolume?.(vol0a100);
+              event.target.unMute?.();
+              event.target.setVolume?.(vol0a100);
             }
 
             if (slot === "current") {
-              const d = e.target.getDuration?.() || 0;
-              const t = e.target.getCurrentTime?.() || 0;
-              setDuracion(d);
-              setTiempoActual(t);
+              const dur = event.target.getDuration?.() || 0;
+              const time = event.target.getCurrentTime?.() || 0;
+              setDuracion(dur);
+              setTiempoActual(time);
             }
 
             const reproducir = slot === "current" && (autoplayPendienteRef.current || estaReproduciendoRef.current);
             sincronizarSlot(slot, reproducir);
           },
-          onStateChange: manejarEstado(
-            slot === "prev" ? playerAnteriorRef : slot === "next" ? playerSiguienteRef : playerActualRef
-          ),
+          onStateChange: manejarEstado(slot === "prev" ? playerAnteriorRef : slot === "next" ? playerSiguienteRef : playerActualRef),
         },
       });
 
@@ -412,15 +533,14 @@ export function MusicPlayer() {
         console.error("No se pudo cargar la API de YouTube", error);
         return;
       }
+
       if (desmontado) return;
 
-      
       crearPlayer("prev", contenedorAnteriorRef.current);
       crearPlayer("current", contenedorActualRef.current);
       crearPlayer("next", contenedorSiguienteRef.current);
 
-      /** === Nuevo: primer sincronización usando songToPlayer() en "current" === */
-      const idx = INDICE_INICIAL;
+      const idx = indiceInicial;
       const prevIdx = normalizarIndice(idx - 1);
       const nextIdx = normalizarIndice(idx + 1);
 
@@ -430,20 +550,16 @@ export function MusicPlayer() {
         next: LISTA_REPRODUCCION[nextIdx]?.id,
       };
 
-      // Cueamos prev/next y current (sin autoplay aquí)
       sincronizarSlot("prev");
       sincronizarSlot("next");
       sincronizarSlot("current", false);
 
-      // Fijamos el índice actual en el que arrancamos
       indiceActualRef.current = idx;
       setIndiceActual(idx);
 
-      // Progreso + metadatos considerando override
       iniciarPollingProgreso();
       actualizarMetadatos(idx, idInicialOverrideRef.current || undefined);
 
-      // Importante: limpiar el override para siguientes cambios
       idInicialOverrideRef.current = null;
     };
 
@@ -452,14 +568,20 @@ export function MusicPlayer() {
     return () => {
       desmontado = true;
       detenerPollingProgreso();
-      [playerAnteriorRef.current, playerActualRef.current, playerSiguienteRef.current].forEach((p) => {
-        try { p?.destroy?.(); } catch {}
+
+      [playerAnteriorRef.current, playerActualRef.current, playerSiguienteRef.current].forEach((player) => {
+        try {
+          player?.destroy?.();
+        } catch (error) {
+          console.warn("No se pudo destruir el player", error);
+        }
       });
+
       playerAnteriorRef.current = null;
       playerActualRef.current = null;
       playerSiguienteRef.current = null;
     };
-  }, [sincronizarSlot, sincronizarTodos]);
+  }, [indiceInicial, normalizarIndice, sincronizarSlot]);
 
   useEffect(() => {
     indiceActualRef.current = indiceActual;
@@ -470,9 +592,14 @@ export function MusicPlayer() {
     estaReproduciendoRef.current = estaReproduciendo;
   }, [estaReproduciendo]);
 
+  /* ======================================================================== */
+  /* === 9. NAVEGACIÓN ENTRE PISTAS ======================================== */
+  /* ======================================================================== */
+
   function cambiarPista(nuevoIndice: number, autoplay = true) {
     const total = LISTA_REPRODUCCION.length;
     if (!total) return;
+
     const idx = ((nuevoIndice % total) + total) % total;
     autoplayPendienteRef.current = autoplay;
     setIndiceActual(idx);
@@ -483,18 +610,21 @@ export function MusicPlayer() {
   pistaSiguienteRef.current = pistaSiguiente;
 
   const alternarPlayPause = () => {
-    const p = playerActualRef.current;
-    if (!p) return;
+    const player = playerActualRef.current;
+    if (!player) return;
+
     const ESTADO = window.YT.PlayerState;
-    const estado = p.getPlayerState?.();
-    if (estado === ESTADO.PLAYING) p.pauseVideo?.();
-    else p.playVideo?.();
+    const estado = player.getPlayerState?.();
+
+    if (estado === ESTADO.PLAYING) player.pauseVideo?.();
+    else player.playVideo?.();
   };
 
-  const onCambiarProgreso = (e: ChangeEvent<HTMLInputElement>) => {
-    const v = Number(e.target.value) || 0;
-    const nuevo = Math.min(1, Math.max(0, v));
+  const onCambiarProgreso = (event: ChangeEvent<HTMLInputElement>) => {
+    const valor = Number(event.target.value) || 0;
+    const nuevo = Math.min(1, Math.max(0, valor));
     const segundos = (duracion || 0) * nuevo;
+
     playerActualRef.current?.seekTo?.(segundos, true);
     setTiempoActual(segundos);
   };
@@ -504,14 +634,17 @@ export function MusicPlayer() {
       const entrada = LISTA_REPRODUCCION[idx];
       const videoId = videoIdOverride || entrada?.id;
       if (!videoId) return;
+
       const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
-      const resp = await fetch(oembedUrl);
-      if (!resp.ok) throw new Error(`Respuesta ${resp.status}`);
-      const data = await resp.json();
+      const respuesta = await fetch(oembedUrl);
+      if (!respuesta.ok) throw new Error(`Respuesta ${respuesta.status}`);
+
+      const data = await respuesta.json();
       setTituloPista(data.title || "Sin título");
       setAutorPista(data.author_name || "");
       setMiniaturaPista(data.thumbnail_url || "");
-    } catch {
+    } catch (error) {
+      console.warn("No se pudieron cargar los metadatos", error);
       setTituloPista("Reproduciendo...");
       setAutorPista("");
       setMiniaturaPista("");
@@ -523,24 +656,36 @@ export function MusicPlayer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [indiceActual]);
 
+  /* ======================================================================== */
+  /* === 10. DERIVADOS DE RENDER (PROGRESO Y ESTILOS) ====================== */
+  /* ======================================================================== */
+
   const progreso = duracion ? Math.min(1, Math.max(0, tiempoActual / duracion)) : 0;
+
   const estiloBarraProgreso = useMemo(
     () => ({ "--mp-progreso": `${(progreso * 100).toFixed(2)}%` }) as CSSProperties,
     [progreso]
   );
+
   const estiloBarraVolumen = useMemo(
     () => ({ "--mp-progreso": `${(volumen * 100).toFixed(2)}%` }) as CSSProperties,
     [volumen]
   );
 
+  /* ======================================================================== */
+  /* === 11. RENDER ======================================================== */
+  /* ======================================================================== */
+
   return (
     <>
+      {/* Iframes ocultos que manejan prev / current / next */}
       <div className="mp-iframes-ocultos" aria-hidden="true">
         <div ref={contenedorAnteriorRef} />
         <div ref={contenedorActualRef} />
         <div ref={contenedorSiguienteRef} />
       </div>
 
+      {/* Overlay de visualizador IA */}
       {mostrarVisualizador && (
         <div className="Reproductor__VisualizadorOverlay" onClick={cerrarVisualizador} role="dialog" aria-modal="true">
           <div className="Reproductor__VisualizadorContenido" onClick={(e) => e.stopPropagation()}>
@@ -567,6 +712,7 @@ export function MusicPlayer() {
       )}
 
       <div className="Reproductor__ContenedorPrincipal">
+        {/* Zona izquierda: portada y datos de la pista */}
         <nav className="Reproductor__ZonaIzquierda">
           <div className="Reproductor__ContenedorMiniatura" onClick={abrirVisualizador} title="Abrir visualizador de imágenes">
             {miniaturaPista && (
@@ -586,6 +732,7 @@ export function MusicPlayer() {
           </div>
         </nav>
 
+        {/* Zona central: controles principales y barra de progreso */}
         <nav className="Reproductor__ZonaCentral">
           <div className="Reproductor__ContenedorControles">
             <button className="Reproductor__BotonControl" onClick={() => cambiarPista(indiceActual - 1, true)} aria-label="Anterior">
@@ -615,8 +762,8 @@ export function MusicPlayer() {
           </div>
         </nav>
 
+        {/* Zona derecha: volumen y accesos directos */}
         <nav className="Reproductor__ZonaDerecha">
-          {/* Botón de mute/unmute con icono dinámico */}
           <button
             type="button"
             className="Reproductor__VolumenBtn"
@@ -627,7 +774,6 @@ export function MusicPlayer() {
             <VolumeIcon />
           </button>
 
-          {/* Slider de volumen */}
           <input
             className="Reproductor__VolumenRange"
             type="range"
@@ -640,7 +786,9 @@ export function MusicPlayer() {
             style={estiloBarraVolumen}
           />
 
-          <div className="Reproductor__ControlLista" title="Lista" aria-hidden="true"><Icon.List /></div>
+          <div className="Reproductor__ControlLista" title="Lista" aria-hidden="true">
+            <Icon.List />
+          </div>
           <div className="Reproductor__ControlImagenesIA" onClick={abrirVisualizador} title="Visualizador IA" aria-hidden="true">
             <Icon.Image />
           </div>
