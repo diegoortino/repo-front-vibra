@@ -49,6 +49,17 @@ const Icon = {
   List: () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 256 256"><path d="M208,32H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM64,72H192a8,8,0,0,1,0,16H64a8,8,0,0,1,0-16Zm0,48h72a8,8,0,0,1,0,16H64a8,8,0,0,1,0-16Zm40,64H64a8,8,0,0,1,0-16h40a8,8,0,0,1,0,16Zm103.59-53.47a8,8,0,0,1-10.12,5.06L184,131.1V176a24,24,0,1,1-16-22.62V120a8,8,0,0,1,10.53-7.59l24,8A8,8,0,0,1,207.59,130.53Z"></path></svg>
   ),
+  Playing: () => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="20"
+      height="20"
+      viewBox="0 0 256 256"
+      fill="currentColor"
+    >
+      <path d="M56,216a8,8,0,0,1-8-8V48a8,8,0,0,1,16,0V208A8,8,0,0,1,56,216Zm56-24V64a8,8,0,0,0-16,0V192a8,8,0,0,0,16,0Zm40,16a8,8,0,0,0,16,0V48a8,8,0,0,0-16,0Zm64-8V88a8,8,0,0,0-16,0v112a8,8,0,0,0,16,0Z"></path>
+    </svg>
+  ),
   Image: () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 256 256"><path d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40ZM156,88a12,12,0,1,1-12,12A12,12,0,0,1,156,88Zm60,112H40V160.69l46.34-46.35a8,8,0,0,1,11.32,0h0L165,181.66a8,8,0,0,0,11.32-11.32l-17.66-17.65L173,138.34a8,8,0,0,1,11.31,0L216,170.07V200Z"></path></svg>
   ),
@@ -201,6 +212,13 @@ export function MusicPlayer() {
   const mutedRef = useRef(muted);
 
   /**
+   * Estado y refs de la lista desplegable con las canciones de la playlist.
+   */
+  const [mostrarLista, setMostrarLista] = useState(false);
+  const listaWrapperRef = useRef<HTMLDivElement | null>(null);
+  const [detallesCanciones, setDetallesCanciones] = useState<Record<string, { titulo: string; autor: string }>>({});
+
+  /**
    * Estados del visualizador de imágenes (overlay con transiciones).
    */
   const [mostrarVisualizador, setMostrarVisualizador] = useState(false);
@@ -235,6 +253,80 @@ export function MusicPlayer() {
   useEffect(() => {
     mutedRef.current = muted;
   }, [muted]);
+
+  /* ======================================================================== */
+  /* === 3.b LISTA DESPLEGABLE DE PLAYLIST ================================= */
+  /* ======================================================================== */
+
+  useEffect(() => {
+    let cancelado = false;
+    const idsUnicos = Array.from(
+      new Set(
+        LISTA_REPRODUCCION.map((entrada) => entrada?.id).filter((id): id is string => typeof id === "string" && id.length > 0)
+      )
+    );
+
+    if (!idsUnicos.length) return;
+
+    const cargarMetadatos = async () => {
+      const resultados = await Promise.all(
+        idsUnicos.map(async (id) => {
+          try {
+            const respuesta = await fetch(
+              `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`
+            );
+            if (!respuesta.ok) throw new Error(`Respuesta ${respuesta.status}`);
+            const data = await respuesta.json();
+            return [id, { titulo: data.title || "Sin título", autor: data.author_name || "" }] as const;
+          } catch (error) {
+            console.warn("No se pudieron precargar metadatos de la lista", id, error);
+            return [id, { titulo: `Canción ${id}`, autor: "" }] as const;
+          }
+        })
+      );
+
+      if (cancelado) return;
+
+      setDetallesCanciones((prev) => {
+        const actualizado = { ...prev };
+        resultados.forEach(([id, detalle]) => {
+          actualizado[id] = detalle;
+        });
+        return actualizado;
+      });
+    };
+
+    cargarMetadatos();
+
+    return () => {
+      cancelado = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!mostrarLista) return;
+
+    const manejarClickFuera = (event: MouseEvent | TouchEvent) => {
+      const nodo = listaWrapperRef.current;
+      if (nodo && !nodo.contains(event.target as Node)) {
+        setMostrarLista(false);
+      }
+    };
+
+    const manejarEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMostrarLista(false);
+    };
+
+    document.addEventListener("mousedown", manejarClickFuera);
+    document.addEventListener("touchstart", manejarClickFuera);
+    document.addEventListener("keydown", manejarEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", manejarClickFuera);
+      document.removeEventListener("touchstart", manejarClickFuera);
+      document.removeEventListener("keydown", manejarEscape);
+    };
+  }, [mostrarLista]);
 
   /* ======================================================================== */
   /* === 4. EFECTOS Y CALLBACKS DEL POLLING DE PROGRESO ==================== */
@@ -674,6 +766,33 @@ export function MusicPlayer() {
     [volumen]
   );
 
+  const pistasDetalladas = useMemo(
+    () =>
+      LISTA_REPRODUCCION.map((entrada, index) => {
+        const id = entrada?.id;
+        const detalles = id ? detallesCanciones[id] : undefined;
+
+        const titulo = detalles?.titulo || (entrada as { title?: string })?.title || `Canción ${index + 1}`;
+        const autor = detalles?.autor || (entrada as { author?: string; artist?: string })?.author || (entrada as { artist?: string })?.artist || "";
+
+        return {
+          id: id ?? `track-${index}`,
+          titulo,
+          autor,
+          index,
+        };
+      }),
+    [detallesCanciones]
+  );
+
+  const cerrarLista = () => setMostrarLista(false);
+  const alternarLista = () => setMostrarLista((prev) => !prev);
+
+  const onSeleccionarCancion = (indice: number) => {
+    cerrarLista();
+    cambiarPista(indice, true);
+  };
+
   /* ======================================================================== */
   /* === 11. RENDER ======================================================== */
   /* ======================================================================== */
@@ -788,8 +907,62 @@ export function MusicPlayer() {
             style={estiloBarraVolumen}
           />
 
-          <div className="Reproductor__ControlLista" title="Lista" aria-hidden="true">
-            <Icon.List />
+          <div
+            className={`Reproductor__ControlListaWrapper ${mostrarLista ? "is-open" : ""}`}
+            ref={listaWrapperRef}
+          >
+            <button
+              type="button"
+              className="Reproductor__ControlLista"
+              onClick={alternarLista}
+              aria-haspopup="true"
+              aria-expanded={mostrarLista}
+              aria-controls="Reproductor__ListaDropdown"
+              title="Lista de reproducción"
+            >
+              <Icon.List />
+            </button>
+
+            {mostrarLista && (
+              <div
+                className="Reproductor__ListaDropdown"
+                id="Reproductor__ListaDropdown"
+                role="menu"
+                aria-label="Lista de reproducción"
+              >
+                {LISTA_REPRODUCCION.length === 0 ? (
+                  <p className="Reproductor__ListaVacia">No hay canciones en la lista.</p>
+                ) : (
+                  <ul className="Reproductor__ListaElementos">
+                    {pistasDetalladas.map(({ id, titulo, autor, index }) => {
+                      const activo = index === indiceActual;
+                      return (
+                        <li key={id} role="none">
+                          <button
+                            type="button"
+                            className={`Reproductor__ListaCancion ${activo ? "is-active" : ""}`}
+                            onClick={() => onSeleccionarCancion(index)}
+                            role="menuitemradio"
+                            aria-checked={activo}
+                          >
+                            <span className="Reproductor__ListaIndice">{index + 1}</span>
+                            <span className="Reproductor__ListaTexto">
+                              <span className="Reproductor__ListaTitulo">{titulo}</span>
+                              {autor && <span className="Reproductor__ListaAutor">{autor}</span>}
+                            </span>
+                            {activo && (
+                              <span className="Reproductor__ListaIcono" aria-hidden="true">
+                                <Icon.Playing />
+                              </span>
+                            )}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            )}
           </div>
           <div className="Reproductor__ControlImagenesIA" onClick={abrirVisualizador} title="Visualizador IA" aria-hidden="true">
             <Icon.Image />
