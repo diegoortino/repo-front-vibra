@@ -445,11 +445,10 @@
   width: 75%;
   margin: 0 auto;
 
-  /* layout interno (puede ajustarse según tus gustos) */
-  display: grid;
-  grid-template-columns: 1.1fr minmax(380px, 1.6fr) 1fr;
+  /* layout interno */
+  display: flex;
+  flex-direction: column;
   gap: 16px;
-  align-items: center;
 
   /* estética “aero” */
   background: rgba(17, 18, 26, 0.55);             /* translúcido */
@@ -468,6 +467,50 @@
     inset 0 1px 0 rgba(255,255,255,0.03);         /* brillo sutil arriba */
 }
 
+.Reproductor__LayoutDetallado {
+  display: grid;
+  grid-template-columns: 1.1fr minmax(380px, 1.6fr) 1fr;
+  gap: 16px;
+  align-items: center;
+}
+
+.Reproductor__MobileBar {
+  display: none;
+}
+
+.Reproductor__MobileButtons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.Reproductor__MobileTrack {
+  display: none;
+}
+
+.Reproductor__MobileActions {
+  display: none;
+}
+
+.Reproductor__MobileActionButton {
+  border: none;
+  background: transparent;
+  color: var(--mp-texto);
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  transition: background .2s ease, transform .08s ease;
+}
+.Reproductor__MobileActionButton:hover {
+  background: rgba(139, 92, 246, 0.1);
+}
+.Reproductor__MobileActionButton:active {
+  transform: scale(0.95);
+}
+
 /* Cuando necesites elevar más el “vidrio”: */
 @supports (backdrop-filter: blur(12px)) {
   .Reproductor__ContenedorPrincipal {
@@ -482,15 +525,118 @@
 @media (max-width: 900px) {
   .Reproductor__ContenedorPrincipal {
     width: 92%;
+  }
+  .Reproductor__LayoutDetallado {
     grid-template-columns: 1fr 1fr;
   }
-  .Reproductor__ZonaDerecha { display: none; }
 }
 @media (max-width: 560px) {
   .Reproductor__ContenedorMiniatura { width: 52px; height: 52px; }
   .Reproductor__TituloPista { font-size: 13px; }
   .Reproductor__AutorPista { font-size: 11px; }
   .Reproductor__ContenedorProgreso { grid-template-columns: 36px 1fr 36px; }
+}
+
+@media (max-width: 768px) {
+  .Reproductor__ContenedorPrincipal {
+    width: 100%;
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    padding: 16px 20px calc(16px + env(safe-area-inset-bottom, 0));
+    gap: 12px;
+  }
+
+  .Reproductor__MobileBar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .Reproductor__MobileControls {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .Reproductor__MobileButtons {
+    justify-content: flex-start;
+  }
+
+  .Reproductor__MobileTrack {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--mp-texto);
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .Reproductor__MobileActions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .Reproductor__LayoutDetallado {
+    display: none;
+    width: 100%;
+  }
+
+  .Reproductor__ContenedorPrincipal.is-mobile-expanded .Reproductor__LayoutDetallado {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .Reproductor__ContenedorPrincipal:not(.is-mobile-expanded) .Reproductor__ZonaIzquierda,
+  .Reproductor__ContenedorPrincipal:not(.is-mobile-expanded) .Reproductor__ZonaCentral,
+  .Reproductor__ContenedorPrincipal:not(.is-mobile-expanded) .Reproductor__ZonaDerecha {
+    display: none;
+  }
+
+  .Reproductor__ContenedorPrincipal.is-mobile-expanded .Reproductor__ZonaIzquierda {
+    width: 100%;
+  }
+
+  .Reproductor__ContenedorPrincipal.is-mobile-expanded .Reproductor__ZonaCentral {
+    width: 100%;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .Reproductor__ContenedorPrincipal.is-mobile-expanded .Reproductor__ContenedorControles {
+    justify-content: center;
+  }
+
+  .Reproductor__ContenedorPrincipal.is-mobile-expanded .Reproductor__ContenedorProgreso {
+    grid-template-columns: 36px 1fr 36px;
+  }
+
+  .Reproductor__ContenedorPrincipal.is-mobile-expanded .Reproductor__ZonaDerecha {
+    width: 100%;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .Reproductor__ContenedorPrincipal.is-mobile-expanded .Reproductor__VolumenRange {
+    width: 100%;
+    flex: 1 1 120px;
+  }
+
+  .Reproductor__ContenedorPrincipal.is-mobile-expanded .Reproductor__VolumenBtn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .Reproductor__ContenedorPrincipal.is-mobile-expanded .Reproductor__ControlListaWrapper {
+    flex: 0 0 auto;
+  }
 }
 
 /* SVGs: tamaño y herencia de color */
@@ -528,17 +674,3 @@
 /* Si preferís clase, podrías envolverlos y aplicar esto */
 .mp-iframes-ocultos { position: absolute; width: 0; height: 0; overflow: hidden; }
 
-/* ====== Responsive ====== */
-@media (max-width: 900px) {
-  .Reproductor__ContenedorPrincipal {
-    grid-template-columns: 1fr 1fr;
-  }
-  .Reproductor__ZonaDerecha { display: none; }
-}
-
-@media (max-width: 560px) {
-  .Reproductor__ContenedorMiniatura { width: 52px; height: 52px; }
-  .Reproductor__TituloPista { font-size: 13px; }
-  .Reproductor__AutorPista { font-size: 11px; }
-  .Reproductor__ContenedorProgreso { grid-template-columns: 36px 1fr 36px; }
-}

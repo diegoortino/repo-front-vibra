@@ -74,7 +74,17 @@ const Icon = {
   ),
   VolHigh: () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 256 256"><path d="M160,32.25V223.69a8.29,8.29,0,0,1-3.91,7.18,8,8,0,0,1-9-.56l-65.57-51A4,4,0,0,1,80,176.16V79.84a4,4,0,0,1,1.55-3.15l65.57-51a8,8,0,0,1,10,.16A8.27,8.27,0,0,1,160,32.25ZM60,80H32A16,16,0,0,0,16,96v64a16,16,0,0,0,16,16H60a4,4,0,0,0,4-4V84A4,4,0,0,0,60,80Zm126.77,20.84a8,8,0,0,0-.72,11.3,24,24,0,0,1,0,31.72,8,8,0,1,0,12,10.58,40,40,0,0,0,0-52.88A8,8,0,0,0,186.74,100.84Zm40.89-26.17a8,8,0,1,0-11.92,10.66,64,64,0,0,1,0,85.34,8,8,0,1,0,11.92,10.66,80,80,0,0,0,0-106.66Z"></path></svg>
+  ),  ChevronUp: () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256">
+      <path d="M208.49,168.49a12,12,0,0,1-17,0L128,105,64.49,168.49a12,12,0,0,1-17-17l72-72a12,12,0,0,1,17,0l72,72A12,12,0,0,1,208.49,168.49Z"></path>
+    </svg>
   ),
+  ChevronDown: () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256">
+      <path d="M207.51,87.51a12,12,0,0,0-17,0L128,150.06,65.49,87.51a12,12,0,0,0-17,17l72,72a12,12,0,0,0,17,0l72-72A12,12,0,0,0,207.51,87.51Z"></path>
+    </svg>
+  ),
+
 };
 
 /** Lista de videos (YouTube IDs) */
@@ -224,6 +234,7 @@ export function MusicPlayer() {
   const [mostrarVisualizador, setMostrarVisualizador] = useState(false);
   const [indiceImagen, setIndiceImagen] = useState(0);
   const [animandoSlide, setAnimandoSlide] = useState(false);
+  const [panelMovilExpandido, setPanelMovilExpandido] = useState(false);
 
   /* ======================================================================== */
   /* === 3. EFECTOS RELACIONADOS CON EL VOLUMEN ============================ */
@@ -327,6 +338,12 @@ export function MusicPlayer() {
       document.removeEventListener("keydown", manejarEscape);
     };
   }, [mostrarLista]);
+
+  useEffect(() => {
+    if (!panelMovilExpandido && mostrarLista) {
+      setMostrarLista(false);
+    }
+  }, [panelMovilExpandido, mostrarLista]);
 
   /* ======================================================================== */
   /* === 4. EFECTOS Y CALLBACKS DEL POLLING DE PROGRESO ==================== */
@@ -477,6 +494,7 @@ export function MusicPlayer() {
 
   const abrirVisualizador = () => setMostrarVisualizador(true);
   const cerrarVisualizador = () => setMostrarVisualizador(false);
+  const alternarPanelMovil = () => setPanelMovilExpandido((prev) => !prev);
 
   /* ======================================================================== */
   /* === 7. FUNCIONES DE SINCRONIZACIÓN ENTRE SLOTS ======================== */
@@ -785,7 +803,15 @@ export function MusicPlayer() {
     [detallesCanciones]
   );
 
-  const alternarLista = () => setMostrarLista((prev) => !prev);
+  const iconoDespliegueMovil = panelMovilExpandido ? <Icon.ChevronDown /> : <Icon.ChevronUp />;
+  const etiquetaDespliegueMovil = panelMovilExpandido ? "Contraer reproductor" : "Expandir reproductor";
+
+  const alternarLista = () =>
+    setMostrarLista((prev) => {
+      const siguiente = !prev;
+      if (siguiente) setPanelMovilExpandido(true);
+      return siguiente;
+    });
 
   const onSeleccionarCancion = (indice: number) => {
     cambiarPista(indice, true);
@@ -830,142 +856,204 @@ export function MusicPlayer() {
         </div>
       )}
 
-      <div className="Reproductor__ContenedorPrincipal">
-        {/* Zona izquierda: portada y datos de la pista */}
-        <nav className="Reproductor__ZonaIzquierda">
-          <div className="Reproductor__ContenedorMiniatura" onClick={abrirVisualizador} title="Abrir visualizador de imágenes">
-            {miniaturaPista && (
-              <img
-                src={miniaturaPista}
-                alt={tituloPista ? `Portada: ${tituloPista}` : "Portada"}
-                className="Reproductor__ImagenMiniatura"
-                loading="eager"
-                decoding="async"
-                draggable={false}
-              />
-            )}
+      <div className={`Reproductor__ContenedorPrincipal ${panelMovilExpandido ? "is-mobile-expanded" : ""}`}>
+        <div className="Reproductor__MobileBar">
+          <div className="Reproductor__MobileControls">
+            <div className="Reproductor__MobileButtons">
+              <button
+                type="button"
+                className="Reproductor__BotonControl"
+                onClick={() => cambiarPista(indiceActual - 1, true)}
+                aria-label="Anterior"
+              >
+                <Icon.Prev />
+              </button>
+              <button
+                type="button"
+                className="Reproductor__BotonControl"
+                onClick={alternarPlayPause}
+                aria-label={estaReproduciendo ? "Pausar" : "Reproducir"}
+              >
+                {estaReproduciendo ? <Icon.Pause /> : <Icon.Play />}
+              </button>
+              <button
+                type="button"
+                className="Reproductor__BotonControl"
+                onClick={() => cambiarPista(indiceActual + 1, true)}
+                aria-label="Siguiente"
+              >
+                <Icon.Next />
+              </button>
+            </div>
+            <div className="Reproductor__MobileTrack" title={tituloPista}>
+              {tituloPista}
+            </div>
           </div>
-          <div className="Reproductor__ContenedorInfoPista">
-            <div className="Reproductor__TituloPista">{tituloPista}</div>
-            <div className="Reproductor__AutorPista">{autorPista}</div>
+          <div className="Reproductor__MobileActions">
+            <button
+              type="button"
+              className="Reproductor__MobileActionButton"
+              onClick={abrirVisualizador}
+              aria-label="Visualizador de imágenes"
+              title="Visualizador de imágenes"
+            >
+              <Icon.Image />
+            </button>
+            <button
+              type="button"
+              className={`Reproductor__MobileActionButton Reproductor__MobileActionButton--toggle ${panelMovilExpandido ? "is-expanded" : ""}`}
+              onClick={alternarPanelMovil}
+              aria-label={etiquetaDespliegueMovil}
+              title={etiquetaDespliegueMovil}
+            >
+              {iconoDespliegueMovil}
+            </button>
           </div>
-        </nav>
+        </div>
 
-        {/* Zona central: controles principales y barra de progreso */}
-        <nav className="Reproductor__ZonaCentral">
-          <div className="Reproductor__ContenedorControles">
-            <button className="Reproductor__BotonControl" onClick={() => cambiarPista(indiceActual - 1, true)} aria-label="Anterior">
-              <Icon.Prev />
+        <div className="Reproductor__LayoutDetallado">
+          {/* Zona izquierda: portada y datos de la pista */}
+          <nav className="Reproductor__ZonaIzquierda">
+            <div className="Reproductor__ContenedorMiniatura" onClick={abrirVisualizador} title="Abrir visualizador de imágenes">
+              {miniaturaPista && (
+                <img
+                  src={miniaturaPista}
+                  alt={tituloPista ? `Portada: ${tituloPista}` : "Portada"}
+                  className="Reproductor__ImagenMiniatura"
+                  loading="eager"
+                  decoding="async"
+                  draggable={false}
+                />
+              )}
+            </div>
+            <div className="Reproductor__ContenedorInfoPista">
+              <div className="Reproductor__TituloPista">{tituloPista}</div>
+              <div className="Reproductor__AutorPista">{autorPista}</div>
+            </div>
+          </nav>
+
+          {/* Zona central: controles principales y barra de progreso */}
+          <nav className="Reproductor__ZonaCentral">
+            <div className="Reproductor__ContenedorControles">
+              <button className="Reproductor__BotonControl" onClick={() => cambiarPista(indiceActual - 1, true)} aria-label="Anterior">
+                <Icon.Prev />
+              </button>
+              <button className="Reproductor__BotonControl" onClick={alternarPlayPause} aria-label={estaReproduciendo ? "Pausar" : "Reproducir"}>
+                {estaReproduciendo ? <Icon.Pause /> : <Icon.Play />}
+              </button>
+              <button className="Reproductor__BotonControl" onClick={() => cambiarPista(indiceActual + 1, true)} aria-label="Siguiente">
+                <Icon.Next />
+              </button>
+            </div>
+            <div className="Reproductor__ContenedorProgreso">
+              <div className="Reproductor__Tiempo Reproductor__TiempoActual">{formatearTiempo(tiempoActual)}</div>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.001}
+                value={progreso}
+                onChange={onCambiarProgreso}
+                className="Reproductor__BarraProgreso"
+                aria-label="Barra de progreso"
+                style={estiloBarraProgreso}
+              />
+              <div className="Reproductor__Tiempo Reproductor__TiempoTotal">{formatearTiempo(duracion)}</div>
+            </div>
+          </nav>
+
+          {/* Zona derecha: volumen y accesos directos */}
+          <nav className="Reproductor__ZonaDerecha">
+            <button
+              type="button"
+              className="Reproductor__VolumenBtn"
+              onClick={alternarMute}
+              aria-label={muted || volumen === 0 ? "Activar sonido" : "Silenciar"}
+              title={muted || volumen === 0 ? "Activar sonido" : "Silenciar"}
+            >
+              <VolumeIcon />
             </button>
-            <button className="Reproductor__BotonControl" onClick={alternarPlayPause} aria-label={estaReproduciendo ? "Pausar" : "Reproducir"}>
-              {estaReproduciendo ? <Icon.Pause /> : <Icon.Play />}
-            </button>
-            <button className="Reproductor__BotonControl" onClick={() => cambiarPista(indiceActual + 1, true)} aria-label="Siguiente">
-              <Icon.Next />
-            </button>
-          </div>
-          <div className="Reproductor__ContenedorProgreso">
-            <div className="Reproductor__Tiempo Reproductor__TiempoActual">{formatearTiempo(tiempoActual)}</div>
+
             <input
+              className="Reproductor__VolumenRange"
               type="range"
               min={0}
               max={1}
-              step={0.001}
-              value={progreso}
-              onChange={onCambiarProgreso}
-              className="Reproductor__BarraProgreso"
-              aria-label="Barra de progreso"
-              style={estiloBarraProgreso}
+              step={0.01}
+              value={volumen}
+              onChange={onCambiarVolumen}
+              aria-label="Control de volumen"
+              style={estiloBarraVolumen}
             />
-            <div className="Reproductor__Tiempo Reproductor__TiempoTotal">{formatearTiempo(duracion)}</div>
-          </div>
-        </nav>
 
-        {/* Zona derecha: volumen y accesos directos */}
-        <nav className="Reproductor__ZonaDerecha">
-          <button
-            type="button"
-            className="Reproductor__VolumenBtn"
-            onClick={alternarMute}
-            aria-label={muted || volumen === 0 ? "Activar sonido" : "Silenciar"}
-            title={muted || volumen === 0 ? "Activar sonido" : "Silenciar"}
-          >
-            <VolumeIcon />
-          </button>
+            <div
+              className={`Reproductor__ControlListaWrapper ${mostrarLista ? "is-open" : ""}`}
+              ref={listaWrapperRef}
+            >
+              <button
+                type="button"
+                className="Reproductor__ControlLista"
+                onClick={alternarLista}
+                aria-haspopup="true"
+                aria-expanded={mostrarLista}
+                aria-controls="Reproductor__ListaDropdown"
+                title="Lista de reproducción"
+              >
+                <Icon.List />
+              </button>
 
-          <input
-            className="Reproductor__VolumenRange"
-            type="range"
-            min={0}
-            max={1}
-            step={0.01}
-            value={volumen}
-            onChange={onCambiarVolumen}
-            aria-label="Control de volumen"
-            style={estiloBarraVolumen}
-          />
-
-          <div
-            className={`Reproductor__ControlListaWrapper ${mostrarLista ? "is-open" : ""}`}
-            ref={listaWrapperRef}
-          >
+              {mostrarLista && (
+                <div
+                  className="Reproductor__ListaDropdown"
+                  id="Reproductor__ListaDropdown"
+                  role="menu"
+                  aria-label="Lista de reproducción"
+                >
+                  {LISTA_REPRODUCCION.length === 0 ? (
+                    <p className="Reproductor__ListaVacia">No hay canciones en la lista.</p>
+                  ) : (
+                    <ul className="Reproductor__ListaElementos">
+                      {pistasDetalladas.map(({ id, titulo, autor, index }) => {
+                        const activo = index === indiceActual;
+                        return (
+                          <li key={id} role="none">
+                            <button
+                              type="button"
+                              className={`Reproductor__ListaCancion ${activo ? "is-active" : ""}`}
+                              onClick={() => onSeleccionarCancion(index)}
+                              role="menuitemradio"
+                              aria-checked={activo}
+                            >
+                              <span className="Reproductor__ListaIndice">{index + 1}</span>
+                              <span className="Reproductor__ListaTexto">
+                                <span className="Reproductor__ListaTitulo">{titulo}</span>
+                                {autor && <span className="Reproductor__ListaAutor">{autor}</span>}
+                              </span>
+                              {activo && (
+                                <span className="Reproductor__ListaIcono" aria-hidden="true">
+                                  <Icon.Playing />
+                                </span>
+                              )}
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </div>
             <button
               type="button"
-              className="Reproductor__ControlLista"
-              onClick={alternarLista}
-              aria-haspopup="true"
-              aria-expanded={mostrarLista}
-              aria-controls="Reproductor__ListaDropdown"
-              title="Lista de reproducción"
+              className="Reproductor__ControlImagenesIA"
+              onClick={abrirVisualizador}
+              title="Visualizador IA"
+              aria-label="Visualizador IA"
             >
-              <Icon.List />
+              <Icon.Image />
             </button>
-
-            {mostrarLista && (
-              <div
-                className="Reproductor__ListaDropdown"
-                id="Reproductor__ListaDropdown"
-                role="menu"
-                aria-label="Lista de reproducción"
-              >
-                {LISTA_REPRODUCCION.length === 0 ? (
-                  <p className="Reproductor__ListaVacia">No hay canciones en la lista.</p>
-                ) : (
-                  <ul className="Reproductor__ListaElementos">
-                    {pistasDetalladas.map(({ id, titulo, autor, index }) => {
-                      const activo = index === indiceActual;
-                      return (
-                        <li key={id} role="none">
-                          <button
-                            type="button"
-                            className={`Reproductor__ListaCancion ${activo ? "is-active" : ""}`}
-                            onClick={() => onSeleccionarCancion(index)}
-                            role="menuitemradio"
-                            aria-checked={activo}
-                          >
-                            <span className="Reproductor__ListaIndice">{index + 1}</span>
-                            <span className="Reproductor__ListaTexto">
-                              <span className="Reproductor__ListaTitulo">{titulo}</span>
-                              {autor && <span className="Reproductor__ListaAutor">{autor}</span>}
-                            </span>
-                            {activo && (
-                              <span className="Reproductor__ListaIcono" aria-hidden="true">
-                                <Icon.Playing />
-                              </span>
-                            )}
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </div>
-            )}
-          </div>
-          <div className="Reproductor__ControlImagenesIA" onClick={abrirVisualizador} title="Visualizador IA" aria-hidden="true">
-            <Icon.Image />
-          </div>
-        </nav>
+          </nav>
+        </div>
       </div>
     </>
   );
