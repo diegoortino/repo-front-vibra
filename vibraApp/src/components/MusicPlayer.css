@@ -287,7 +287,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 5vh 5vw;
   overflow: hidden;
   cursor: zoom-out;
 }
@@ -302,8 +301,8 @@
 
 .Reproductor__VisualizadorContenido {
   position: relative;
-  width: 75vw;
-  height: 75vh;
+  width: 85%;
+  height: 75%;
   overflow: hidden;
   border-radius: 24px;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -443,6 +442,7 @@
 
   /* tamaño y posicionamiento */
   width: 75%;
+  height: 15%;
   margin: 0 auto;
 
   /* layout interno */

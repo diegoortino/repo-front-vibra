@@ -288,11 +288,31 @@ export const useMusicContext = () => {
 export const playlistToPlayer= () => {
 
   const LISTA_REPRODUCCION = [
-    { id: "iKI5q_hF0o0" },
-    { id: "Ulnobym-Ouo" },
-    { id: "N0Ovqd-epOI" },
-    { id: "eUlGF_8r5Ac" },
-    { id: "hXYCrTX-l24" },
+    { id: "Nco_kh8xJDs" },     // Would? :contentReference[oaicite:1]{index=1}
+    { id: "TAqZb52sgpU" },     // Man in the Box :contentReference[oaicite:2]{index=2}
+    { id: "zTuD8k3JvxQ" },     // Them Bones :contentReference[oaicite:3]{index=3}
+    { id: "nWK0kqjPSVI" },     // Down in a Hole (MTV Unplugged) :contentReference[oaicite:4]{index=4}
+    { id: "IpEXM1Yziws" },     // Angry Chair :contentReference[oaicite:5]{index=5}
+    { id: "SBcADQziQWY" },     // Check My Brain :contentReference[oaicite:6]{index=6}
+    { id: "b3EK6rLXeVQ" },     // Your Decision (4K Remastered) :contentReference[oaicite:7]{index=7}
+    { id: "r80HF68KM8g" },     // No Excuses :contentReference[oaicite:8]{index=8}
+    { id: "ODTv9Lt5WYs" },     // I Stay Away :contentReference[oaicite:9]{index=9}
+    { id: "__biilMpnmw" },     // Again :contentReference[oaicite:10]{index=10}
+    { id: "lr_tyst3SVE" },     // A Looking in View :contentReference[oaicite:11]{index=11}
+    { id: "9sH7D8UmMKI" },     // Lesson Learned :contentReference[oaicite:12]{index=12}
+    { id: "G23iLGhh9lo" },     // Nutshell (Official Audio) :contentReference[oaicite:13]{index=13}
+    { id: "4nPVHJdbdWE" },     // Rainier Fog :contentReference[oaicite:14]{index=14}
+    { id: "hHsjxQXnkpc" },     // Red Giant (video relacionado) :contentReference[oaicite:15]{index=15}
+    { id: "gCxm0C_eXxY" },     // Last of My Kind (video) :contentReference[oaicite:16]{index=16}
+    { id: "M9zhDf_Rp0U" },     // Acid Bubble (interactive video) :contentReference[oaicite:17]{index=17}
+    { id: "adojS5sQNJw" },     // Private Hell (estudio vídeo) :contentReference[oaicite:18]{index=18}
+    { id: "SZTQ7xlFFA8" },     // (otra pista vídeo del álbum) :contentReference[oaicite:19]{index=19}
+    { id: "y6B1dgKQh34" },     // Check My Brain (otra versión) :contentReference[oaicite:20]{index=20}
+    { id: "MNMqyrhPrXY" },     // Them Bones (2022 Remaster) :contentReference[oaicite:21]{index=21}
+    { id: "zARYZk1gi7g" },     // Check My Brain (versión alternativa) :contentReference[oaicite:22]{index=22}
+    { id: "luS73-YIoSo" },     // Them Bones (Lyrics) :contentReference[oaicite:23]{index=23}
+    { id: "P47XMHylkeI" },     // Them Bones (Live Jools Holland) :contentReference[oaicite:24]{index=24}
+    { id: "rDazG4m8SNk" },     // Check My Brain (otra) :contentReference[oaicite:25]{index=25}
   ];
   return LISTA_REPRODUCCION;
 
@@ -301,23 +321,19 @@ export const playlistToPlayer= () => {
 export const imagelistToPlayer= () => {
 
   const IMAGENES_VISUALIZADOR: string[] = [
-    "https://indiehoy.com/wp-content/uploads/2025/08/eterna-inocencia.webp",
-    "https://es.rollingstone.com/wp-content/uploads/2022/11/eterna-inocencia.jpg",
-    "https://www.nacionrock.com/wp-content/uploads/IMG_2236.webp",
-    "https://www.ultrabrit.com/wp-content/uploads/2017/08/eterna-inocencia-guillermo-marmol-1.jpg",
-    "https://static.esnota.com/uploads/2021/12/Guille.jpg",
-    "https://planetacabezon.com/06-2023/resize_1686602016.jpg",
-    "https://www.notaalpie.com.ar/wp-content/uploads/2023/08/6-Credito-Yoel-Alderisi-1.jpg",
-    "https://www.futuro.cl/wp-content/uploads/2023/11/eterna-inocencia-768x433.webp",
-    "https://acordesweb.com/img/eterna-inocencia-f7cc82cdfecfa0e11aa8168dee01fa8a.jpg",
-    "https://cdn.rock.com.ar/wp-content/uploads/2024/01/eterna-inocencia-2.jpeg"
+    "https://rockbrotherspodcast.com/wp-content/uploads/2024/04/new-9.jpg",
+    "https://lacarnemagazine.com/wp-content/uploads/2021/03/alice-in-chains-1-1200x675.jpg",
+    "https://www.scienceofnoise.net/wp-content/uploads/2020/11/81bXiGNAFAL._SL1500_.jpg",
+    "https://www.rollingstone.com/wp-content/uploads/2018/06/alice-in-chains-best-performances-ebd93499-c827-446c-9b67-2b512382ac83.jpg?w=800",
+    "https://www.tiempoar.com.ar/wp-content/uploads/2022/09/AIC_Foto01_1992.jpeg",
+    "https://i.guim.co.uk/img/static/sys-images/guardian/Pix/pictures/2011/3/9/1299671749750/Mike-Starr-Jerry-Cantrell-007.jpg?width=465&dpr=1&s=none&crop=none",
   ];
   return IMAGENES_VISUALIZADOR;
 }
 
 export const songToPlayer= () => {
 
-  const SONG_TO_PLAY = { id: "iKI5q_hF0o0" };
+  const SONG_TO_PLAY = { id: "Nco_kh8xJDs" };
   return SONG_TO_PLAY;
   
 }
