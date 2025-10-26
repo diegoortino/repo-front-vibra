@@ -3,26 +3,32 @@
  */
 
 /* Dependencies  */
-import { useContext, useEffect, useState } from "react";
+import { useRef,useContext, useEffect, useState } from "react";
 
 /* types */
-import type {ResultProps} from "../types/resultProps";
+import type {ResultProps} from "../types/resultProps"
+import type {Track} from "../context/MusicContext";
+;
+
+
+/* Context */
+import SearchContext from "../context/searchContext";
+import MusicContext from "../context/MusicContext";
 
 /* hooks */
-import SearchContext from "../hooks/searchContext";
-
-
+import {useSearchContext} from "../context/searchContext";
+import {useMusicContext} from "../context/MusicContext";
 /* Components */
 
 /* styles */
-
 import "./result-section.css";
-
 
 //props:{playTrack:any,dataRecive:ResultProps[]}
 const ResultsSection =() => {
 
-    const {toReproduce,dataFromSearch} = useContext(SearchContext);
+    const search = useSearchContext();
+    const music = useMusicContext();
+    let   dataFromSearch:ResultProps[]= search.dataFromSearch;
     const vSt:string[]=["init","result","results","notFound"];
     const [state,setState]=useState(vSt[0]);
           
@@ -30,10 +36,12 @@ const ResultsSection =() => {
         //console.log("Result",props.dataRecive,props.dataRecive.hasOwnProperty("id"));
         console.log("state: "+state);
         if (dataFromSearch instanceof Array){
-          console.log("Array");
+          console.log("Array: ",dataFromSearch);
           if(dataFromSearch.length === 0 || dataFromSearch[0].id==="") {
             /*not found something */ 
             setState(vSt[3]);
+          }if(dataFromSearch[0].id==="0"){
+            setState(vSt[0]);
           }else{
             /*at least some one */
             setState(vSt[2]);
@@ -51,8 +59,8 @@ const ResultsSection =() => {
     const handleClickPlayTrack = (event:any) => {
       event.preventDefault();
       //console.log(event.target.parentElement.parentElement);
-      if (event.target.parentElement.parentElement.hasAttribute("data-track-id"))        
-        toReproduce({ id: event.target.parentElement.parentElement.getAttribute("data-track-id") });
+      if (event.target.parentElement.parentElement.hasAttribute("data-track-id"))
+        music.playSong( { youtubeId:event.target.parentElement.parentElement.getAttribute("data-track-id") } );
     };
 
     const displayResults= () => {
@@ -69,7 +77,7 @@ const ResultsSection =() => {
             );
           break;
         case "result":
-            var data:ResultProps=dataFromSearch;
+            var data:ResultProps=dataFromSearch[0];
             //console.log("result",dataFromSearch,data);
             return (
               <div id="" className="results-grid">
@@ -105,8 +113,8 @@ const ResultsSection =() => {
                       </div>
                     </div>
                   ) }
-              </div>)
-            ;
+              </div>
+              );
           break;
         case "notFound":
           return (
@@ -114,7 +122,8 @@ const ResultsSection =() => {
                 <div className="icon">😔</div>
                 <h3>No se encontraron resultados</h3>
                 <p>Intenta con otros términos de búsqueda</p>
-            </div>);
+            </div>
+            );
           break;
       
         default:

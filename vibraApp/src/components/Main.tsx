@@ -19,13 +19,13 @@ import type {ResultProps} from "../types/resultProps";
 import type {ReproduceProps} from "../types/reproduceProps";
 
 /* hooks */
-import SearchContext from "../hooks/searchContext";
+import SearchContext from "../context/searchContext";
 /* styles */
 import "./main.css";
 
-const Main =(props:{handlerPlayer:any}) => {
+const Main =() => {
 
-  const dataToSearch_0=[{ id: "",
+  const dataToSearch_0=[{ id: "0",
                           title: "",
                           artist: "",
                           duration: "",
@@ -35,7 +35,7 @@ const Main =(props:{handlerPlayer:any}) => {
     
   const dataToSearch = (key:SearchProps) => {
 
-    let uri="https://79a431a7-8114-461a-8a77-ebacab5d46a5.mock.pstmn.io";
+    let uri="";
     
     fetch(uri+"/songs/search?query"+key.search)
       .then(response => response.json())
@@ -57,25 +57,26 @@ const Main =(props:{handlerPlayer:any}) => {
     setDataFromSearch(key);
   };
   const toReproduce = (key:ReproduceProps) => {
-    props.handlerPlayer(key);
+    
   };
   //console.log(dataFromSearch);
   return (
-    <>      
-      <main className="MainContainer">
-        <SearchContext.Provider value={{dataToSearch,// callback from search
-                                        toReproduce, // callback from Resoults
-                                        toResoult,   // callback from Search>most(suggestion)
-                                        dataFromSearch}} > {/* data to render Results */}
-          <SearchSection/>
-          <ResultsSection/>
-        </SearchContext.Provider>
-        <Routes>
-                <Route path="/account" element={<Profile/>} />
-                <Route path="/favorites" element={<Favorites/>} />
-                <Route path="/follows" element={<Follows/>} />
-        </Routes>    
-      </main>
+    <>
+        <main className="main-content">
+          <SearchContext.Provider value={{dataToSearch,// callback from search
+                                          toReproduce, // callback from Resoults
+                                          toResoult,   // callback from Search>most(suggestion)
+                                          dataFromSearch}} > {/* data to render Results */}
+            <SearchSection/>
+            <ResultsSection/>
+          </SearchContext.Provider>
+          <Routes>
+                  <Route path="/account" element={<Profile/>} />
+                  <Route path="/favorites" element={<Favorites/>} />
+                  <Route path="/follows" element={<Follows/>} />
+          </Routes>    
+        </main>
+      
     </>
   );
 }

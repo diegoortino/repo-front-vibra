@@ -1,0 +1,76 @@
+
+/* Header */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 5%;
+    backdrop-filter: blur(15px);
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid rgba(160, 120, 255, 0.1);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+
+.logo-container {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+.logo-container:hover {
+    transform: scale(1.02);
+}
+
+.titulo {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    color: #a078ff;
+    font-size: 2rem;
+    letter-spacing: 0.1em;
+    text-shadow: 0 0 15px rgba(160, 120, 255, 0.5);
+}
+
+.user-section {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #a078ff, #c4b2ff);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+.user-avatar:hover {
+    transform: scale(1.1);
+}
+
+.logout-btn {
+    background: transparent;
+    border: 1px solid rgba(160, 120, 255, 0.5);
+    color: #a078ff;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.logout-btn:hover {
+    background: rgba(160, 120, 255, 0.1);
+    border-color: #a078ff;
+}

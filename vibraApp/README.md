@@ -41,7 +41,8 @@ src/
 # Key Considerations:
 
     Grouping by Feature or Route:
-    This approach places all related files for a specific feature or page (components, hooks, styles, tests) within a single directory, improving locality and making it easier to understand and modify features.
+    This approach places all related files for a specific feature or page (components, hooks, styles, tests) within a single directory, improving locality 
+	and making it easier to understand and modify features.
     
     Grouping by File Type:
     This method organizes files based on their type (e.g., all components in components/, all hooks in hooks/). This can be simpler for smaller projects.
@@ -66,7 +67,8 @@ src/
 
 2. Other Files (Non-Components):
 
-    Kebab-case or CamelCase for Non-Component Files: For files that do not export React components (e.g., utility functions, services, hooks), use either kebab-case (e.g., auth-service.js, use-data-fetch.ts) or camelCase (e.g., authService.js, useDataFetch.ts). Consistency within your project is key.
+    Kebab-case or CamelCase for Non-Component Files: For files that do not export React components (e.g., utility functions, services, hooks), use either kebab-case
+	 (e.g., auth-service.js, use-data-fetch.ts) or camelCase (e.g., authService.js, useDataFetch.ts). Consistency within your project is key.
 
 3. Index Files:
 
@@ -79,13 +81,15 @@ src/
 General Considerations:
 
     Descriptive Names: Choose names that clearly indicate the file's purpose and content.
-    Consistency: The most important aspect is to establish and adhere to a consistent naming convention throughout your entire project. This improves collaboration and reduces confusion for all developers working on the codebase.
+    Consistency: The most important aspect is to establish and adhere to a consistent naming convention throughout your entire project. This improves collaboration
+	 and reduces confusion for all developers working on the codebase.
     Avoid Special Characters: Stick to alphanumeric characters, hyphens, and underscores to prevent potential issues across different operating systems or tools.
 
     Consistent file naming in React improves readability and maintainability, but different projects may use varying conventions
     . The most common approach is to use PascalCase for files that contain React components and kebab-case for everything else. 
     For components
-    Name your component files using PascalCase and match the file name to the component's name. This practice aligns with how components are declared and referenced in JSX, starting with a capital letter. 
+    Name your component files using PascalCase and match the file name to the component's name. This practice aligns with how components are declared and
+	 referenced in JSX, starting with a capital letter. 
 
 # Examples:
 Example:

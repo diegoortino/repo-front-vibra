@@ -13,7 +13,8 @@ import type {SearchProps} from "../types/searchProps";
 import type {SearchSectionProps} from "../types/searchSectionProps";
 
 /* hooks */
-import SearchContext from "../hooks/searchContext";
+import SearchContext from "../context/searchContext";
+import {useSearchContext} from "../context/searchContext";
 
 /* Components */
 
@@ -23,7 +24,7 @@ import "./search-section.css"
 // const SearchSection =(props:SearchSectionProps) => {
 const SearchSection =() => {
 
-  const {dataToSearch,toResoult} = useContext(SearchContext);
+  const {dataToSearch,toResoult} = useSearchContext();
   const [valueCurrent, setValueCurrent]:[string,any] = useState("");
   const [trent, setTrent]:[DynamicProps[],any] = useState([]);
   const URL="/data/data.json";
