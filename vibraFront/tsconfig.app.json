@@ -24,4 +24,6 @@
     "noUncheckedSideEffectImports": true
   },
   "include": ["src"]
+  // Cambiar cuando se agregue el jwt
+  // "include": ["src", "../vibraApp/src/utils/fetchWithAuth.ts"]
 }

@@ -1,230 +1,676 @@
-/* ====== Variables y base ====== */
-:root{
-  --player-height: 100px;         
-  --player-padding-x: 20px;       
-  --player-gap: 16px;             
-  --player-z: 100;                /* por encima de la sidebar */
-  --sidebar-width-mobile: 0px;
-  --sidebar-width-desktop: 60px;
+/* =========================
+   MusicPlayer.css (estilo oscuro tipo Spotify)
+   Mapea el estilo del ejemplo a las clases Reproductor__*
+   ========================= */
+
+/* ====== Tokens de color y base ====== */
+:root {
+  --mp-fondo: #0b0b10;
+  --mp-elevado: #11121a;
+  --mp-texto: #e9e9ef;
+  --mp-texto-dim: #a3a3b2;
+  --mp-borde: #26273a;
+  --mp-acento: #8b5cf6; /* violeta */
+  --mp-acento-sec: #c084fc;
+  --mp-slider-fondo: rgba(255, 255, 255, 0.12);
+  --mp-slider-borde: rgba(255, 255, 255, 0.08);
+  --mp-slider-thumb: #f5f3ff;
 }
 
-html, body, #root { height: 100%; }
-body { padding-bottom: var(--player-height); }
+/* ====== Zona izquierda: portada + títulos ====== */
+.Reproductor__ZonaIzquierda {
+  display: flex; align-items: center; gap: 12px; min-width: 0;
+}
 
-/* ====== Contenedor principal: barra fija inferior ====== */
-.MusicPlayer__MainContainer{
-  position: fixed;
-  left: var(--sidebar-width-mobile);
-  right: 0;
-  bottom: 0;
-  width: calc(100% - var(--sidebar-width-mobile));
-  height: var(--player-height);
-  z-index: var(--player-z);
+.Reproductor__ContenedorMiniatura {
+  width: 64px; height: 64px; border-radius: 8px; overflow: hidden;
+  background: #111; flex: 0 0 auto; cursor: pointer;
+  border: 1px solid var(--mp-borde);
+}
+.Reproductor__ImagenMiniatura {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
 
+.Reproductor__ContenedorInfoPista { min-width: 0; }
+.Reproductor__TituloPista {
+  color: var(--mp-texto);
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.Reproductor__AutorPista {
+  color: var(--mp-texto-dim);
+  font-size: 12px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ====== Zona central: controles + progreso ====== */
+.Reproductor__ZonaCentral {
+  display: flex; flex-direction: column; gap: 8px; align-items: center;
+}
+
+.Reproductor__ContenedorControles {
+  display: flex; align-items: center; gap: 10px;
+}
+
+.Reproductor__BotonControl {
+  background: transparent;
+  color: var(--mp-texto);
+  border: 1px solid transparent;
+  padding: 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform .08s ease, background .2s ease, border-color .2s ease;
+  font-size: 16px; line-height: 1;
+}
+.Reproductor__BotonControl:hover { background: rgba(139,92,246,.10); }
+.Reproductor__BotonControl:active { transform: scale(0.95); }
+/* Botón central (play/pause) con acento visual */
+.Reproductor__ContenedorControles .Reproductor__BotonControl:nth-child(2) {
+  border: 1px solid var(--mp-acento);
+  box-shadow: 0 0 0 3px rgba(139,92,246,.15) inset;
+  border-radius: 12px;
+}
+
+.Reproductor__ContenedorProgreso {
+  width: 100%;
   display: grid;
-  grid-template-columns: minmax(200px, 1fr) minmax(320px, 1.8fr) minmax(180px, 0.9fr);
-  grid-template-rows: 1fr auto; /* fila 2: barra progreso */
-
-  align-items: center;
-  padding: 16px var(--player-padding-x) 12px;
-  gap: var(--player-gap);
-
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(20,20,24,0.85);
-  backdrop-filter: blur(20px);
-  box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+  grid-template-columns: 40px 1fr 40px;
+  gap: 10px; align-items: center;
 }
 
-/* ====== Zonas principales ====== */
-.MusicPlayer__LeftNav,
-.MusicPlayer__CenterNav,
-.MusicPlayer__RightNav{
+.Reproductor__Tiempo {
+  color: var(--mp-texto-dim);
+  font-size: 12px; text-align: center;
+}
+
+/* ====== Input range (progreso) ====== */
+.Reproductor__BarraProgreso {
+  -webkit-appearance: none; appearance: none;
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  outline: none;
+  cursor: pointer;
+  border: 1px solid var(--mp-slider-borde);
+  background: linear-gradient(
+    90deg,
+    var(--mp-acento) 0%,
+    var(--mp-acento) var(--mp-progreso, 0%),
+    var(--mp-slider-fondo) var(--mp-progreso, 0%),
+    var(--mp-slider-fondo) 100%
+  );
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.4);
+  transition: box-shadow .2s ease;
+}
+.Reproductor__BarraProgreso:focus-visible {
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.4), 0 0 0 3px rgba(139, 92, 246, 0.35);
+}
+.Reproductor__BarraProgreso::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: inherit;
+  background: inherit;
+}
+.Reproductor__BarraProgreso::-moz-range-track {
+  height: 8px;
+  border-radius: inherit;
+  background: inherit;
+  border: none;
+}
+.Reproductor__BarraProgreso::-moz-range-progress {
+  background: linear-gradient(90deg, var(--mp-acento), var(--mp-acento-sec));
+  height: 8px;
+  border-radius: inherit;
+}
+
+/* ====== Zona derecha: iconos (volumen/lista/IA) ====== */
+.Reproductor__ZonaDerecha {
+  display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+}
+.Reproductor__ZonaDerecha > div,
+.Reproductor__ZonaDerecha > button {
+  width: 36px; height: 36px;
+  display: grid; place-items: center;
+  border-radius: 10px;
+  color: var(--mp-texto);
+  cursor: pointer;
+  transition: background .2s ease, transform .08s ease;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+.Reproductor__ZonaDerecha > div:hover,
+.Reproductor__ZonaDerecha > button:hover { background: rgba(139,92,246,.10); }
+.Reproductor__ZonaDerecha > div:active,
+.Reproductor__ZonaDerecha > button:active { transform: scale(0.95); }
+
+.Reproductor__ControlListaWrapper {
+  position: relative;
+  display: flex;
+}
+
+.Reproductor__ControlListaWrapper.is-open > .Reproductor__ControlLista {
+  background: rgba(139, 92, 246, 0.15);
+}
+
+.Reproductor__ControlLista {
+  width: 36px; height: 36px;
+  display: grid; place-items: center;
+  border-radius: 10px;
+  color: inherit;
+  cursor: pointer;
+  transition: background .2s ease, transform .08s ease;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.Reproductor__ControlLista:hover { background: rgba(139,92,246,.10); }
+.Reproductor__ControlLista:active { transform: scale(0.95); }
+.Reproductor__ControlLista:focus-visible {
+  outline: 2px solid var(--mp-acento);
+  outline-offset: 2px;
+}
+
+.Reproductor__ListaDropdown {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 12px);
+  width: min(320px, 80vw);
+  background: var(--mp-elevado);
+  border: 1px solid var(--mp-borde);
+  border-radius: 14px;
+  box-shadow: 0 18px 40px rgba(8, 9, 15, 0.55);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 80;
+}
+
+.Reproductor__ListaElementos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 280px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.Reproductor__ListaElementos::-webkit-scrollbar {
+  display: none;
+}
+
+.Reproductor__ListaCancion {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  border-radius: 10px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background .2s ease, transform .08s ease;
+  color: var(--mp-texto);
+}
+
+.Reproductor__ListaCancion:hover {
+  background: rgba(139, 92, 246, 0.12);
+}
+
+.Reproductor__ListaCancion.is-active {
+  background: rgba(139, 92, 246, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(139, 92, 246, 0.35);
+}
+
+.Reproductor__ListaCancion:focus-visible {
+  outline: 2px solid var(--mp-acento);
+  outline-offset: 2px;
+}
+
+.Reproductor__ListaIndice {
+  width: 24px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--mp-texto-dim);
+}
+
+.Reproductor__ListaTexto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.Reproductor__ListaTitulo {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--mp-texto);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.Reproductor__ListaAutor {
+  font-size: 12px;
+  color: var(--mp-texto-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.Reproductor__ListaIcono {
+  color: var(--mp-acento-sec);
+  display: grid;
+  place-items: center;
+}
+
+.Reproductor__ListaVacia {
+  margin: 0;
+  color: var(--mp-texto-dim);
+  font-size: 13px;
+  text-align: center;
+}
+
+/* ====== Overlay Visualizador ====== */
+.Reproductor__VisualizadorOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
   display: flex;
   align-items: center;
-  flex-direction: row;
-  min-width: 0;
-  grid-row: 1; /* fila superior */
+  justify-content: center;
+  overflow: hidden;
+  cursor: zoom-out;
+}
+.Reproductor__VisualizadorOverlay::before {
+  content: "";
+  position: absolute; inset: 0;
+  backdrop-filter: blur(4px) saturate(120%);
+  background: var(--mp-overlay-backdrop);
+  pointer-events: none;
+  z-index: 0;
 }
 
-/* ====== Zona izquierda (cover + info) ====== */
-.MusicPlayer__LeftNav{ gap: 16px; }
+.Reproductor__VisualizadorContenido {
+  position: relative;
+  width: 85%;
+  height: 75%;
+  overflow: hidden;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 24px 60px rgba(3, 4, 8, 0.65),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  background: #05070c;
+  cursor: default;
+  z-index: 1;
+}
+.Reproductor__VisualizadorContenido::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0.15) 25%, rgba(0, 0, 0, 0.15) 75%, rgba(0, 0, 0, 0.75) 100%);
+  mix-blend-mode: soft-light;
+  pointer-events: none;
+}
 
-.MusicPlayer__albumArtContainer {
-  width: 64px; height: 64px;
-  border-radius: 12px; overflow: hidden; flex: 0 0 auto;
+.Reproductor__VisualizadorSlider {
+  position: absolute;
+  inset: 0;
+  isolation: isolate;
+  border-radius: inherit;
+  overflow: hidden;
+}
+
+/* Slides */
+.Reproductor__Slide {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover; display: block;
+  border-radius: inherit;
+  transform: translateX(0); opacity: 1;
+  filter: saturate(115%);
+}
+
+/* Animación simple tipo “slide” (entra el nuevo, sale el previo) */
+.Reproductor__VisualizadorSlider.is-animating .Reproductor__Slide--in {
+  animation: mp-slide-in .25s ease both;
+}
+.Reproductor__VisualizadorSlider.is-animating .Reproductor__Slide--out {
+  animation: mp-slide-out .25s ease both;
+}
+
+@keyframes mp-slide-in {
+  from { transform: translate3d(24px, 0, 0); opacity: 0; }
+  to   { transform: translate3d(0, 0, 0);    opacity: 1; }
+}
+@keyframes mp-slide-out {
+  from { transform: translate3d(0, 0, 0);    opacity: 1; }
+  to   { transform: translate3d(-24px, 0, 0); opacity: 0; }
+}
+
+/* ===== Volumen ===== */
+.Reproductor__VolumenRange {
+  width: 160px;
+  -webkit-appearance: none; appearance: none;
+  height: 8px;
+  border-radius: 999px;
+  outline: none;
+  cursor: pointer;
+  border: 1px solid var(--mp-slider-borde);
+  background: linear-gradient(
+    90deg,
+    var(--mp-acento) 0%,
+    var(--mp-acento) var(--mp-progreso, 0%),
+    var(--mp-slider-fondo) var(--mp-progreso, 0%),
+    var(--mp-slider-fondo) 100%
+  );
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+  transition: box-shadow .2s ease;
+}
+.Reproductor__VolumenRange:focus-visible {
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35), 0 0 0 3px rgba(139, 92, 246, 0.35);
+}
+.Reproductor__VolumenRange::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: inherit;
+  background: inherit;
+}
+.Reproductor__VolumenRange::-moz-range-track {
+  height: 8px;
+  border-radius: inherit;
+  background: inherit;
+  border: none;
+}
+.Reproductor__VolumenRange::-moz-range-progress {
+  background: linear-gradient(90deg, var(--mp-acento), var(--mp-acento-sec));
+  height: 8px;
+  border-radius: inherit;
+}
+.Reproductor__BarraProgreso::-webkit-slider-thumb,
+.Reproductor__VolumenRange::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 18px; height: 18px;
+  margin-top: -6px;
+  border-radius: 999px;
+  background: var(--mp-slider-thumb);
+  border: 2px solid var(--mp-acento);
+  box-shadow:
+    0 0 0 4px var(--mp-slider-thumb-outline),
+    0 6px 14px rgba(0, 0, 0, 0.35);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.Reproductor__BarraProgreso::-webkit-slider-thumb:hover,
+.Reproductor__VolumenRange::-webkit-slider-thumb:hover {
+  transform: scale(1.08);
+  box-shadow:
+    0 0 0 6px rgba(139, 92, 246, 0.28),
+    0 10px 18px rgba(0, 0, 0, 0.45);
+}
+.Reproductor__BarraProgreso::-moz-range-thumb,
+.Reproductor__VolumenRange::-moz-range-thumb {
+  width: 18px; height: 18px;
+  border-radius: 999px;
+  background: var(--mp-slider-thumb);
+  border: 2px solid var(--mp-acento);
+  box-shadow:
+    0 0 0 4px var(--mp-slider-thumb-outline),
+    0 6px 14px rgba(0, 0, 0, 0.35);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.Reproductor__BarraProgreso::-moz-range-thumb:hover,
+.Reproductor__VolumenRange::-moz-range-thumb:hover {
+  transform: scale(1.08);
+  box-shadow:
+    0 0 0 6px rgba(139, 92, 246, 0.28),
+    0 10px 18px rgba(0, 0, 0, 0.45);
+}
+
+/* ===== VARIANTE: barra tipo “ventana aero” centrada (75% ancho) ===== */
+.Reproductor__ContenedorPrincipal {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 60;
+
+  /* tamaño y posicionamiento */
+  width: 75%;
+  height: 15%;
+  margin: 0 auto;
+
+  /* layout interno */
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  /* estética “aero” */
+  background: rgba(17, 18, 26, 0.55);             /* translúcido */
+  backdrop-filter: blur(12px) saturate(120%);     /* frosted glass */
+  -webkit-backdrop-filter: blur(12px) saturate(120%);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+
+  /* padding + safe area */
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0));
+  box-shadow:
+    0 -8px 24px rgba(0,0,0,.35),                  /* sombra externa */
+    inset 0 1px 0 rgba(255,255,255,0.03);         /* brillo sutil arriba */
+}
+
+.Reproductor__LayoutDetallado {
+  display: grid;
+  grid-template-columns: 1.1fr minmax(380px, 1.6fr) 1fr;
+  gap: 16px;
+  align-items: center;
+}
+
+.Reproductor__MobileBar {
+  display: none;
+}
+
+.Reproductor__MobileButtons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.Reproductor__MobileTrack {
+  display: none;
+}
+
+.Reproductor__MobileActions {
+  display: none;
+}
+
+.Reproductor__MobileActionButton {
+  border: none;
+  background: transparent;
+  color: var(--mp-texto);
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  transition: background .2s ease, transform .08s ease;
+}
+.Reproductor__MobileActionButton:hover {
+  background: rgba(139, 92, 246, 0.1);
+}
+.Reproductor__MobileActionButton:active {
+  transform: scale(0.95);
+}
+
+/* Cuando necesites elevar más el “vidrio”: */
+@supports (backdrop-filter: blur(12px)) {
+  .Reproductor__ContenedorPrincipal {
+    background: rgba(17, 18, 26, 0.45);
+  }
+}
+
+/* Ajustes de responsive para que no quede demasiado angosto en mobile */
+@media (max-width: 1100px) {
+  .Reproductor__ContenedorPrincipal { width: 88%; }
+}
+@media (max-width: 900px) {
+  .Reproductor__ContenedorPrincipal {
+    width: 92%;
+  }
+  .Reproductor__LayoutDetallado {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 560px) {
+  .Reproductor__ContenedorMiniatura { width: 52px; height: 52px; }
+  .Reproductor__TituloPista { font-size: 13px; }
+  .Reproductor__AutorPista { font-size: 11px; }
+  .Reproductor__ContenedorProgreso { grid-template-columns: 36px 1fr 36px; }
+}
+
+@media (max-width: 768px) {
+  .Reproductor__ContenedorPrincipal {
+    width: 100%;
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    padding: 16px 20px calc(16px + env(safe-area-inset-bottom, 0));
+    gap: 12px;
+  }
+
+  .Reproductor__MobileBar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .Reproductor__MobileControls {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .Reproductor__MobileButtons {
+    justify-content: flex-start;
+  }
+
+  .Reproductor__MobileTrack {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--mp-texto);
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .Reproductor__MobileActions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .Reproductor__LayoutDetallado {
+    display: none;
+    width: 100%;
+  }
+
+  .Reproductor__ContenedorPrincipal.is-mobile-expanded .Reproductor__LayoutDetallado {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .Reproductor__ContenedorPrincipal:not(.is-mobile-expanded) .Reproductor__ZonaIzquierda,
+  .Reproductor__ContenedorPrincipal:not(.is-mobile-expanded) .Reproductor__ZonaCentral,
+  .Reproductor__ContenedorPrincipal:not(.is-mobile-expanded) .Reproductor__ZonaDerecha {
+    display: none;
+  }
+
+  .Reproductor__ContenedorPrincipal.is-mobile-expanded .Reproductor__ZonaIzquierda {
+    width: 100%;
+  }
+
+  .Reproductor__ContenedorPrincipal.is-mobile-expanded .Reproductor__ZonaCentral {
+    width: 100%;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .Reproductor__ContenedorPrincipal.is-mobile-expanded .Reproductor__ContenedorControles {
+    justify-content: center;
+  }
+
+  .Reproductor__ContenedorPrincipal.is-mobile-expanded .Reproductor__ContenedorProgreso {
+    grid-template-columns: 36px 1fr 36px;
+  }
+
+  .Reproductor__ContenedorPrincipal.is-mobile-expanded .Reproductor__ZonaDerecha {
+    width: 100%;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .Reproductor__ContenedorPrincipal.is-mobile-expanded .Reproductor__VolumenRange {
+    width: 100%;
+    flex: 1 1 120px;
+  }
+
+  .Reproductor__ContenedorPrincipal.is-mobile-expanded .Reproductor__VolumenBtn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .Reproductor__ContenedorPrincipal.is-mobile-expanded .Reproductor__ControlListaWrapper {
+    flex: 0 0 auto;
+  }
+}
+
+/* SVGs: tamaño y herencia de color */
+.Reproductor__BotonControl svg,
+.Reproductor__ZonaDerecha svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+/* Botón de volumen (mismo look que los iconos de la derecha) */
+.Reproductor__VolumenBtn {
+  width: 50px; height: 50px;
   display: grid; place-items: center;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.1);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  border-radius: 10px;
+  color: var(--mp-texto);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  transition: background .2s ease, transform .08s ease;
+}
+.Reproductor__VolumenBtn:hover { background: rgba(139,92,246,.10); }
+.Reproductor__VolumenBtn:active { transform: scale(0.95); }
+
+/* (ya tenías) SVGs consistentes */
+.Reproductor__BotonControl svg,
+.Reproductor__ZonaDerecha svg,
+.Reproductor__VolumenBtn svg {
+  width: 20px;
+  height: 20px;
+  display: block;
 }
 
-.MusicPlayer__albumArtImage { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* ====== Utilidad: contenedores invisibles de iframes (ya vienen inline) ====== */
+/* Si preferís clase, podrías envolverlos y aplicar esto */
+.mp-iframes-ocultos { position: absolute; width: 0; height: 0; overflow: hidden; }
 
-.MusicPlayer__trackInfoContainer{ min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-.MusicPlayer__trackTitle{ white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff; font-size: 15px; font-weight: 600; }
-.MusicPlayer__artistName{ white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: rgba(255,255,255,0.7); font-size: 13px; }
-
-/* ====== Zona central (controles + progreso) ====== */
-.MusicPlayer__CenterNav{ flex-direction: column; align-items: center; gap: 12px; min-width: 0; }
-
-.MusicPlayer__musicControlsContainer{
-  display: flex; align-items: center; justify-content: center; gap: 20px;
-}
-
-.MusicPlayer__button_backTrack,
-.MusicPlayer__button_playStop,
-.MusicPlayer__button_nextTrack{
-  display: flex; align-items: center; justify-content: center;
-  border-radius: 8px; cursor: pointer; user-select: none;
-  color: #fff; border: 1px solid transparent;
-  transition: transform .2s ease, box-shadow .3s ease, background .2s ease, border-color .2s ease;
-}
-.MusicPlayer__button_backTrack,
-.MusicPlayer__button_nextTrack { width: 40px; height: 40px; background: rgba(255,255,255,0.1); font-size: 16px; }
-.MusicPlayer__button_playStop { width: 48px; height: 48px; background: rgba(255,255,255,0.95); color: #000; font-size: 18px; box-shadow: 0 4px 12px rgba(255,255,255,0.2); }
-
-.MusicPlayer__button_backTrack:hover,
-.MusicPlayer__button_nextTrack:hover { background: rgba(255,255,255,0.2); transform: scale(1.05); border-color: rgba(255,255,255,0.2); }
-.MusicPlayer__button_playStop:hover { background: #fff; transform: scale(1.05); box-shadow: 0 6px 16px rgba(255,255,255,0.3); }
-
-/* ====== Progreso (fila 2) ====== */
-.MusicPlayer__progressBarContainer{
-  display: grid; grid-template-columns: auto 1fr auto;
-  align-items: center; gap: 12px; width: 100%;
-  grid-column: 1 / -1; grid-row: 2;
-}
-
-.MusicPlayer__time{
-  min-width: 48px; text-align: center;
-  font-variant-numeric: tabular-nums;
-  color: rgba(255,255,255,0.7); font-size: 12px; font-weight: 500;
-}
-.MusicPlayer__currentTime{ color: #fff; white-space: nowrap; }
-
-.MusicPlayer__progressTrack{
-  position: relative; height: 4px; border-radius: 999px;
-  background: rgba(255,255,255,0.15);
-  cursor: pointer; overflow: hidden; transition: height .2s ease;
-}
-.MusicPlayer__progressFill{
-  position: absolute; inset: 0 auto 0 0;
-  width: 0%; height: 100%; border-radius: 999px;
-  background: linear-gradient(90deg, #d06bff 0%, #8b5cf6 100%);
-  transition: width .25s linear;
-}
-@media (min-width: 768px){ .MusicPlayer__progressTrack:hover{ height: 6px; } }
-
-/* ====== Zona derecha (volumen + extras) ====== */
-.MusicPlayer__RightNav{ justify-content: flex-end; gap: 12px; }
-
-.MusicPlayer__volumeControl{
-  display: flex; align-items: center; gap: 8px; padding: 0 8px; height: 36px;
-  border-radius: 8px; background: rgba(255,255,255,0.1);
-  border: 1px solid transparent; transition: all .2s ease;
-}
-.MusicPlayer__volumeControl:hover{ background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.2); }
-
-.MusicPlayer__volumeButton{
-  display: grid; place-items: center; width: 32px; height: 32px;
-  border: none; background: transparent; cursor: pointer; font-size: 18px;
-  color: rgba(255,255,255,0.9); transition: transform .2s ease; padding: 0;
-}
-.MusicPlayer__volumeButton:hover{ transform: scale(1.1); }
-
-.MusicPlayer__volumeSlider{
-  -webkit-appearance: none; appearance: none;
-  width: 80px; height: 4px; border-radius: 999px;
-  background: rgba(255,255,255,0.2); outline: none; cursor: pointer; transition: height .2s ease;
-}
-.MusicPlayer__volumeSlider:hover{ height: 6px; }
-
-.MusicPlayer__volumeSlider::-webkit-slider-thumb{
-  -webkit-appearance: none; appearance: none;
-  width: 12px; height: 12px; border-radius: 50%; background: #fff; cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.3); transition: all .2s ease;
-}
-.MusicPlayer__volumeSlider::-webkit-slider-thumb:hover{ width: 14px; height: 14px; box-shadow: 0 2px 8px rgba(255,255,255,0.4); }
-.MusicPlayer__volumeSlider::-moz-range-thumb{
-  width: 12px; height: 12px; border-radius: 50%; background: #fff; cursor: pointer; border: none;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.3); transition: all .2s ease;
-}
-.MusicPlayer__volumeSlider::-moz-range-thumb:hover{ width: 14px; height: 14px; box-shadow: 0 2px 8px rgba(255,255,255,0.4); }
-
-.MusicPlayer__volumePercentage{
-  min-width: 36px; text-align: center; font-size: 12px; font-weight: 500;
-  color: rgba(255,255,255,0.8); font-variant-numeric: tabular-nums;
-}
-
-.MusicPlayer__playlistControl,
-.MusicPlayer__iaImagesControl{
-  display: grid; place-items: center; width: 36px; height: 36px;
-  border-radius: 8px; cursor: pointer; user-select: none;
-  background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.8);
-  border: 1px solid transparent; transition: all .2s ease;
-}
-.MusicPlayer__playlistControl:hover,
-.MusicPlayer__iaImagesControl:hover{ background: rgba(255,255,255,0.2); color: #fff; transform: translateY(-1px); border-color: rgba(255,255,255,0.2); }
-
-/* ====== Desktop: correr barra por la sidebar ====== */
-@media (min-width: 550px){
-  :root{ --sidebar-width-mobile: var(--sidebar-width-desktop); }
-  .MusicPlayer__MainContainer{
-    left: var(--sidebar-width-desktop);
-    width: calc(100% - var(--sidebar-width-desktop));
-  }
-  .MusicPlayer__albumArtContainer { width: 72px; height: 72px; }
-  .MusicPlayer__trackTitle { font-size: 16px; }
-  .MusicPlayer__artistName { font-size: 14px; }
-}
-
-/* ====== Tablets ====== */
-@media (max-width: 1024px) and (min-width: 550px){
-  .MusicPlayer__MainContainer{
-    grid-template-columns: minmax(180px, 1.1fr) minmax(280px, 1.6fr) minmax(140px, 0.8fr);
-  }
-  .MusicPlayer__button_backTrack,
-  .MusicPlayer__button_nextTrack { width: 36px; height: 36px; }
-  .MusicPlayer__button_playStop { width: 44px; height: 44px; }
-}
-
-/* ====== Móviles ====== */
-@media (max-width: 768px){
-  .MusicPlayer__volumePercentage{ display: none; }
-  .MusicPlayer__volumeSlider{ width: 60px; }
-}
-@media (max-width: 549px){
-  :root{ --player-height: 88px; --sidebar-width-mobile: 0px; }
-  body{ padding-bottom: var(--player-height); }
-
-  .MusicPlayer__MainContainer{
-    left: 0; width: 100%; gap: 12px; padding: 12px 16px 8px;
-    grid-template-columns: 1fr 1.6fr 1fr;
-  }
-  .MusicPlayer__LeftNav .MusicPlayer__trackInfoContainer{ display: none; }
-  .MusicPlayer__albumArtContainer{ width: 52px; height: 52px; border-radius: 8px; }
-  .MusicPlayer__musicControlsContainer{ gap: 16px; }
-  .MusicPlayer__button_backTrack,
-  .MusicPlayer__button_nextTrack{ width: 36px; height: 36px; font-size: 14px; }
-  .MusicPlayer__button_playStop{ width: 42px; height: 42px; font-size: 16px; }
-  .MusicPlayer__progressBarContainer{ gap: 8px; }
-  .MusicPlayer__time{ font-size: 11px; min-width: 40px; }
-}
-@media (max-width: 420px){
-  .MusicPlayer__volumeSlider, .MusicPlayer__volumePercentage{ display: none; }
-  .MusicPlayer__volumeControl{ width: 36px; padding: 0; justify-content: center; }
-  .MusicPlayer__playlistControl, .MusicPlayer__iaImagesControl{ display: none; }
-  .MusicPlayer__MainContainer{ gap: 8px; padding: 12px 12px 8px; }
-}
-
-/* ====== Visualizer placeholders (si luego activás overlay) ====== */
-.MusicPlayer__VisualizerOverlay { position: fixed; inset: 0; z-index: calc(var(--player-z) + 10); background: rgba(0,0,0,0.55); backdrop-filter: blur(8px) saturate(110%); display: grid; place-items: center; padding: 24px; }
-.MusicPlayer__VisualizerContent { width: min(1100px, 92vw); height: min(70vh, 92vh); background: rgba(20,20,24,0.65); border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.6); display: grid; place-items: center; }
-.MusicPlayer__VisualizerSlider { position: relative; width: 100%; height: 100%; overflow: hidden; }
-.MusicPlayer__Slide { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; will-change: transform, opacity; user-select: none; -webkit-user-drag: none; transition: transform 420ms cubic-bezier(0.2, 0.6, 0.2, 1), opacity 420ms cubic-bezier(0.2, 0.6, 0.2, 1); }
-.MusicPlayer__Slide--in { transform: translateX(0); opacity: 1; }
-.MusicPlayer__Slide--out { transform: translateX(-12%); opacity: 0; filter: blur(1px); }
-.MusicPlayer__VisualizerSlider.is-animating .MusicPlayer__Slide--in { transform: translateX(0); opacity: 1; }
-.MusicPlayer__SlideFallback { position: absolute; inset: 0; display: grid; place-items: center; color: rgba(255,255,255,0.85); font-weight: 600; letter-spacing: .2px; background:
-  radial-gradient(1200px 600px at 20% 10%, rgba(139,92,246,0.15), transparent 60%),
-  radial-gradient(800px 800px at 80% 90%, rgba(208,107,255,0.12), transparent 60%),
-  rgba(18,18,22,0.8); }
