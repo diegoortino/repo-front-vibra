@@ -34,8 +34,8 @@ export function LoginModal({ isOpen, onClose, onOpenRegister}: Props) {
         console.log("respuesta del back" +  JSON.stringify(data, null, 2))
         localStorage.setItem("token_vibra",data.token)
 
-        //redireccion
-        //window.location.href="Otro Dominio"
+        // Redirigir a la app principal (vibraApp)
+        window.location.href = "http://localhost:5174"
     };
     const handleError = () => {
         console.log('Login Failed');

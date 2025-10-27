@@ -8,63 +8,12 @@
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 }
 
-/* Carousel Container */
-.carouselContainer {
-  position: relative;
-  width: 100%;
-}
-
-/* Flechas de navegación */
-.carouselArrow {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 10;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: white;
-  font-size: 1.2rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-.carouselArrow:hover {
-  background: rgba(139, 92, 246, 0.8);
-  border-color: rgba(139, 92, 246, 0.6);
-  transform: translateY(-50%) scale(1.1);
-  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
-}
-
-.carouselArrow:active {
-  transform: translateY(-50%) scale(0.95);
-}
-
-.carouselArrow--left {
-  left: 10px;
-}
-
-.carouselArrow--right {
-  right: 10px;
-}
-
-/* Ocultar scrollbar pero mantener funcionalidad */
-.itemsGrid {
-  scrollbar-width: none !important; /* Firefox */
-  -ms-overflow-style: none !important; /* IE/Edge */
-}
-
-.itemsGrid::-webkit-scrollbar {
-  display: none !important; /* Chrome/Safari/Opera */
-  width: 0 !important;
-  height: 0 !important;
+/* Grid de playlists - 5 columnas */
+.playlistsGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 24px;
+  margin-bottom: 40px;
 }
 
 /* Header */
@@ -154,42 +103,6 @@
   letter-spacing: -0.3px;
 }
 
-.itemsGrid {
-  display: flex;
-  gap: 16px;
-  overflow-x: auto;
-  padding-bottom: 16px;
-  margin-bottom: 40px;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(124, 58, 237, 0.4) rgba(255, 255, 255, 0.05);
-}
-
-.itemsGrid::-webkit-scrollbar {
-  height: 6px;
-}
-
-.itemsGrid::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 10px;
-}
-
-.itemsGrid::-webkit-scrollbar-thumb {
-  background: rgba(124, 58, 237, 0.4);
-  border-radius: 10px;
-}
-
-.itemsGrid::-webkit-scrollbar-thumb:hover {
-  background: rgba(124, 58, 237, 0.6);
-}
-
-.itemsGrid > div {
-  flex: 0 0 150px;
-}
-
-/* Playlists más grandes */
-.itemsGrid > .playlistCard {
-  flex: 0 0 200px;
-}
 
 .item {
   display: flex;
@@ -278,6 +191,44 @@
   transform: translateY(-4px);
 }
 
+/* Card especial para crear playlist */
+.createPlaylistCard {
+  border: 2px dashed rgba(139, 92, 246, 0.4);
+  background: rgba(139, 92, 246, 0.05);
+}
+
+.createPlaylistCard:hover {
+  border-color: rgba(139, 92, 246, 0.8);
+  background: rgba(139, 92, 246, 0.12);
+  box-shadow: 0 4px 20px rgba(139, 92, 246, 0.2);
+}
+
+.createPlaylistCover {
+  width: 100%;
+  height: 200px;
+  background: rgba(139, 92, 246, 0.1);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.createPlaylistCard:hover .createPlaylistCover {
+  background: rgba(139, 92, 246, 0.2);
+}
+
+.createPlaylistIcon {
+  font-size: 4rem;
+  color: rgba(139, 92, 246, 0.6);
+  transition: all 0.3s ease;
+}
+
+.createPlaylistCard:hover .createPlaylistIcon {
+  color: rgba(139, 92, 246, 1);
+  transform: scale(1.1);
+}
+
 .playlistCard .cardCover {
   width: 100%;
   position: relative;
@@ -333,6 +284,44 @@
   box-shadow: 0 0 25px rgba(139, 92, 246, 0.4);
 }
 
+/* Botón editar en playlist card - inline con el título */
+.playlistCard .editButton {
+  padding: 4px 6px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: rgba(139, 92, 246, 0.7);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.playlistCard .editButton:hover {
+  color: rgba(139, 92, 246, 1);
+  background: rgba(139, 92, 246, 0.1);
+  transform: scale(1.1);
+}
+
+/* Botón eliminar en playlist card - inline con el título */
+.playlistCard .deleteButton {
+  padding: 4px 6px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: rgba(239, 68, 68, 0.7);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.playlistCard .deleteButton:hover {
+  color: rgba(239, 68, 68, 1);
+  background: rgba(239, 68, 68, 0.1);
+  transform: scale(1.1);
+}
+
 /* Grid de sugerencias */
 .suggestionsGrid {
   display: grid;
@@ -350,6 +339,13 @@
   padding: 8px;
   border-radius: 12px;
   border: 2px solid transparent;
+  width: 100%;
+}
+
+/* Ancho fijo solo para playlist cards */
+.playlistCard {
+  max-width: 220px;
+  min-width: 220px;
 }
 
 .suggestionCard:hover {
@@ -441,14 +437,24 @@
   text-align: center;
 }
 
+.titleRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+
 .cardTitle {
   font-size: 0.95rem;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.95);
-  margin: 0 0 4px 0;
+  margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
+  text-align: center;
 }
 
 .cardSubtitle {
@@ -512,8 +518,9 @@
     gap: 20px;
   }
 
-  .itemsGrid > div {
-    flex: 0 0 140px;
+  .playlistsGrid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
   }
 
   .itemCover {
@@ -557,16 +564,13 @@
   }
 
   .suggestionsGrid {
-    grid-template-columns: repeat(3, 1fr); /* 3 columnas */
+    grid-template-columns: repeat(3, 1fr);
     gap: 16px;
   }
 
-  .itemsGrid {
-    gap: 12px;
-  }
-
-  .itemsGrid > div {
-    flex: 0 0 130px;
+  .playlistsGrid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
   }
 
   .itemCover {
@@ -604,12 +608,13 @@
   }
 
   .suggestionsGrid {
-    grid-template-columns: repeat(2, 1fr); /* 2 columnas */
+    grid-template-columns: repeat(2, 1fr);
     gap: 14px;
   }
 
-  .itemsGrid > div {
-    flex: 0 0 120px;
+  .playlistsGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
   }
 
   .itemCover {
@@ -656,16 +661,13 @@
   }
 
   .suggestionsGrid {
-    grid-template-columns: repeat(2, 1fr); /* 2 columnas */
+    grid-template-columns: repeat(2, 1fr);
     gap: 12px;
   }
 
-  .itemsGrid {
-    gap: 10px;
-  }
-
-  .itemsGrid > div {
-    flex: 0 0 110px;
+  .playlistsGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
   }
 
   .itemCover {
@@ -712,12 +714,13 @@
   }
 
   .suggestionsGrid {
-    grid-template-columns: repeat(2, 1fr); /* 2 columnas */
+    grid-template-columns: repeat(2, 1fr);
     gap: 10px;
   }
 
-  .itemsGrid > div {
-    flex: 0 0 100px;
+  .playlistsGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
   }
 
   .itemCover {

@@ -7,9 +7,6 @@ import { faBell as faBellSolid } from '@fortawesome/free-solid-svg-icons';
 import { faBell as faBellRegular } from '@fortawesome/free-regular-svg-icons';
 import { faHeart as faHeartSolid } from '@fortawesome/free-solid-svg-icons';
 import { faHeart as faHeartRegular } from '@fortawesome/free-regular-svg-icons';
-// Lupa solo en solid pq en regular no hay gratis
-import { faMagnifyingGlass as faSearchIcon } from '@fortawesome/free-solid-svg-icons';
-
 import { faUser as faUserSolid } from '@fortawesome/free-solid-svg-icons';
 import { faUser as faUserRegular } from '@fortawesome/free-regular-svg-icons';
 
@@ -22,14 +19,6 @@ export function Sidebar(){
                         <div className='navItem'>
                             <FontAwesomeIcon icon={isActive ? faHomeSolid : faHomeRegular} />
                             <p>Home</p>
-                        </div>
-                    )}
-                </NavLink>
-                <NavLink to={"/search"}>
-                    {({ isActive }) => (
-                        <div className='navItem'>
-                            <FontAwesomeIcon icon={isActive ? faSearchIcon : faSearchIcon} />
-                            <p className={isActive ? 'text-blue-500' : 'text-gray-400'} >Search</p>
                         </div>
                     )}
                 </NavLink>

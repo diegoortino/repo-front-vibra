@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import "./Waves.css";
+import "./waves.css";
 
 export function Waves() {
   const canvasRef = useRef<HTMLCanvasElement>(null);

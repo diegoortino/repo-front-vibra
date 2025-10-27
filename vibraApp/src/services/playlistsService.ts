@@ -2,6 +2,17 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
+// Configurar axios para incluir el token automáticamente
+axios.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token_vibra');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+}, (error) => {
+  return Promise.reject(error);
+});
+
 export interface Playlist {
   id: string;
   name: string;
@@ -45,8 +56,66 @@ export const playlistsService = {
     return data;
   },
 
-  async updatePlaylist(id: string): Promise<Playlist> {
+  async updatePlaylist(id: string, name: string, songIds: string[]): Promise<Playlist> {
+    // Paso 1: Actualizar el nombre de la playlist
+    await axios.put(`${API_URL}/playlists/${id}`, {
+      name
+    });
+
+    // Paso 2: Obtener playlist actual con relaciones playlistSongs
+    const response = await axios.get(`${API_URL}/playlists/${id}?includeSongs=true`);
+    const currentPlaylist = response.data;
+
+    // Paso 3: Eliminar todas las canciones actuales usando el ID de playlistSongs
+    if (currentPlaylist.playlistSongs && currentPlaylist.playlistSongs.length > 0) {
+      for (const playlistSong of currentPlaylist.playlistSongs) {
+        await axios.delete(`${API_URL}/playlists/${id}/songs/${playlistSong.songId}`);
+      }
+    }
+
+    // Paso 4: Agregar las nuevas canciones
+    for (const songId of songIds) {
+      await axios.post(`${API_URL}/playlists/${id}/songs`, {
+        songId
+      });
+    }
+
+    // Paso 5: Obtener la playlist actualizada
+    const updatedPlaylist = await this.getPlaylistById(id);
+    return updatedPlaylist;
+  },
+
+  async regeneratePlaylist(id: string): Promise<Playlist> {
     const response = await axios.patch(`${API_URL}/playlists/${id}/regenerate`);
     return response.data;
+  },
+
+  async createPlaylist(name: string, songIds: string[], userId?: string): Promise<Playlist> {
+    // Paso 1: Crear la playlist vacía
+    const url = userId
+      ? `${API_URL}/playlists?userId=${userId}`
+      : `${API_URL}/playlists`;
+
+    const createResponse = await axios.post(url, {
+      name,
+      isPublic: false
+    });
+
+    const playlist = createResponse.data;
+
+    // Paso 2: Agregar las canciones una por una
+    for (const songId of songIds) {
+      await axios.post(`${API_URL}/playlists/${playlist.id}/songs`, {
+        songId
+      });
+    }
+
+    // Paso 3: Obtener la playlist actualizada con las canciones
+    const updatedPlaylist = await this.getPlaylistById(playlist.id);
+    return updatedPlaylist;
+  },
+
+  async deletePlaylist(id: string): Promise<void> {
+    await axios.delete(`${API_URL}/playlists/${id}`);
   }
 };

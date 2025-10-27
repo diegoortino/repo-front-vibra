@@ -1,92 +1,92 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHeart, faPlay, faShuffle, faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
+import { faPlay, faPlus, faTrash, faEdit } from '@fortawesome/free-solid-svg-icons';
 import './Favorites.css';
-import { useEffect, useRef, useState } from 'react';
-import { FavoriteSkeleton } from './FavoriteSkeleton';
+import { useEffect, useState } from 'react';
 import { PlaylistCover } from './PlaylistCover';
-import { useMusic } from '../../hooks';
+import { CreatePlaylistModal } from './CreatePlaylistModal';
+import { ConfirmModal } from '../ConfirmModal/ConfirmModal';
+import { Toast } from '../Toast/Toast';
+import type { ToastType } from '../Toast/Toast';
 import { useMusicContext } from '../../context/MusicContext';
-import type { Song } from '../../types';
 import { playlistsService } from '../../services/playlistsService';
-import type { Playlist } from '../../services/playlistsService';
+import type { Playlist, PlaylistWithSongs } from '../../services/playlistsService';
+import type { Song } from '../../types';
 
 export function Favorites() {
-  // Hook para obtener canciones del backend
-  const { songs, loading, error, fetchSongs } = useMusic();
-
-  // Context para reproducir canciones, obtener la canción actual y manejar canciones aleatorias
-  const { playSong, loadSong, currentSong, playlist, randomSongs, setRandomSongs, currentPlaylistId, setCurrentPlaylistId } = useMusicContext();
+  // Context para reproducir playlists
+  const { playSong, currentSong, currentPlaylistId, setCurrentPlaylistId } = useMusicContext();
 
   // Estado para playlists
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [loadingPlaylists, setLoadingPlaylists] = useState(true);
+  const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingPlaylist, setEditingPlaylist] = useState<PlaylistWithSongs | null>(null);
 
-  // Ref para evitar doble ejecución al actualizar canciones
-  const isUpdatingRef = useRef(false);
+  // Estado para toast notifications
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<ToastType>('success');
+  const [isToastVisible, setIsToastVisible] = useState(false);
 
-  // Ref para saber si el usuario presionó "Descubre Más"
-  const userRequestedNewSongs = useRef(false);
+  // Estado para modal de confirmación de eliminación
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [playlistToDelete, setPlaylistToDelete] = useState<Playlist | null>(null);
 
-  // Ref y estado para el scroll de playlists
-  const playlistsScrollRef = useRef<HTMLDivElement>(null);
-  const [showLeftArrow, setShowLeftArrow] = useState(false);
-  const [showRightArrow, setShowRightArrow] = useState(true);
+  // Función para cargar playlists - Mostrar playlists de usuario + 14 públicas
+  const loadPlaylists = async () => {
+    try {
+      setLoadingPlaylists(true);
+      const data = await playlistsService.getAllPlaylists();
+
+      // Separar playlists de usuario (sin género y no públicas)
+      const userPlaylists = data.filter(p => !p.genre && !p.isPublic);
+
+      // Separar playlists públicas (con género, públicas, con canciones)
+      const publicPlaylists = data.filter(p =>
+        p.isPublic &&
+        p.genre &&
+        (p.songCount || 0) > 0
+      );
+
+      console.log('User playlists:', userPlaylists.length);
+      console.log('Public playlists:', publicPlaylists.length);
+
+      // Mostrar: primero las de usuario, luego las 14 públicas
+      const finalPlaylists = [
+        ...userPlaylists,
+        ...publicPlaylists.slice(0, 14)
+      ];
+
+      setPlaylists(finalPlaylists);
+    } catch (error) {
+      console.error('Error loading playlists:', error);
+    } finally {
+      setLoadingPlaylists(false);
+    }
+  };
 
   // Cargar playlists al montar el componente
   useEffect(() => {
-    const loadPlaylists = async () => {
-      try {
-        const data = await playlistsService.getAllPlaylists();
-        // Filtrar solo playlists públicas, con género y que tengan canciones
-        const genrePlaylists = data.filter(p =>
-          p.isPublic &&
-          !p.userId &&
-          p.genre &&
-          (p.songCount || 0) > 0
-        );
-
-        // El backend ya devuelve las playlists en orden aleatorio
-        setPlaylists(genrePlaylists);
-      } catch (error) {
-        console.error('Error loading playlists:', error);
-      } finally {
-        setLoadingPlaylists(false);
-      }
-    };
     loadPlaylists();
   }, []);
 
-  // Cargar canciones aleatorias SOLO si no hay ninguna ya cargada (primera vez)
-  useEffect(() => {
-    if (randomSongs.length === 0) {
-      fetchSongs(24, 0);
-    }
-  }, [randomSongs.length, fetchSongs]);
+  // Helper para mostrar toast
+  const showToast = (message: string, type: ToastType) => {
+    setToastMessage(message);
+    setToastType(type);
+    setIsToastVisible(true);
+  };
 
-  // Cuando llegan canciones del backend, guardarlas en el contexto global
-  useEffect(() => {
-    if (songs.length > 0 && randomSongs.length === 0) {
-      setRandomSongs(songs);
-    }
-  }, [songs, randomSongs.length, setRandomSongs]);
-
-  // Cargar la primera canción en el reproductor cuando se cargan las canciones aleatorias
-  useEffect(() => {
-    if (randomSongs.length > 0 && !currentSong) {
-      const firstSong = randomSongs[0];
-      loadSong(firstSong, randomSongs);
-    }
-  }, [randomSongs, currentSong, loadSong]);
-
-  // Función para generar nueva selección aleatoria
-  const handleDiscoverNewMusic = () => {
-    userRequestedNewSongs.current = true;
-    fetchSongs(24, 0);
+  const hideToast = () => {
+    setIsToastVisible(false);
   };
 
   // Función para reproducir playlist
   const handlePlayPlaylist = async (playlistId: string) => {
     try {
+      // Desactivar el estado de "creando playlist"
+      setIsCreatingPlaylist(false);
+
       const playlistData = await playlistsService.getPlaylistById(playlistId);
 
       if (playlistData.songs && playlistData.songs.length > 0) {
@@ -99,259 +99,256 @@ export function Favorites() {
     }
   };
 
-  // Función para reproducir canción aleatoria (limpia el playlist activo)
-  const handlePlayRandomSong = (song: Song) => {
-    // Limpiar playlist activa cuando se reproduce una canción aleatoria
+  // Función para abrir modal de crear playlist
+  const handleCreatePlaylist = () => {
+    // Activar el estado de "creando playlist" para mostrar el efecto visual
+    setIsCreatingPlaylist(true);
+
+    // Limpiar el currentPlaylistId para que las otras playlists no muestren el efecto
     setCurrentPlaylistId(null);
-    playSong(song, randomSongs);
+
+    // Limpiar editingPlaylist para modo crear
+    setEditingPlaylist(null);
+
+    // Abrir el modal
+    setIsModalOpen(true);
   };
 
-  // Función para actualizar visibilidad de flechas
-  const updateArrowsVisibility = () => {
-    if (!playlistsScrollRef.current) return;
-
-    const { scrollLeft, scrollWidth, clientWidth } = playlistsScrollRef.current;
-
-    setShowLeftArrow(scrollLeft > 10);
-    setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 10);
-  };
-
-  // Función para scroll hacia la izquierda
-  const scrollLeft = () => {
-    if (!playlistsScrollRef.current) return;
-
-    playlistsScrollRef.current.scrollBy({
-      left: -600,
-      behavior: 'smooth'
-    });
-  };
-
-  // Función para scroll hacia la derecha
-  const scrollRight = () => {
-    if (!playlistsScrollRef.current) return;
-
-    playlistsScrollRef.current.scrollBy({
-      left: 600,
-      behavior: 'smooth'
-    });
-  };
-
-  // useEffect para actualizar flechas cuando cambian las playlists
-  useEffect(() => {
-    updateArrowsVisibility();
-
-    const scrollContainer = playlistsScrollRef.current;
-    if (!scrollContainer) return;
-
-    scrollContainer.addEventListener('scroll', updateArrowsVisibility);
-    window.addEventListener('resize', updateArrowsVisibility);
-
-    return () => {
-      scrollContainer.removeEventListener('scroll', updateArrowsVisibility);
-      window.removeEventListener('resize', updateArrowsVisibility);
-    };
-  }, [playlists]);
-
-  // Detectar si la canción actual NO pertenece a la playlist activa
-  useEffect(() => {
-    if (!currentSong || !currentPlaylistId) return;
-
-    const songInCurrentPlaylist = playlist.some(song => song.id === currentSong.id);
-
-    if (!songInCurrentPlaylist) {
-      setCurrentPlaylistId(null);
+  // Función para abrir modal de editar playlist
+  const handleEditPlaylist = async (playlist: Playlist) => {
+    try {
+      // Cargar la playlist completa con sus canciones
+      const playlistData = await playlistsService.getPlaylistById(playlist.id);
+      setEditingPlaylist(playlistData);
+      setIsModalOpen(true);
+    } catch (error) {
+      console.error('Error loading playlist for editing:', error);
+      showToast('Error al cargar playlist', 'error');
     }
-  }, [currentSong, playlist, currentPlaylistId]);
+  };
 
-  // Cuando llegan nuevas canciones del fetch manual, actualizar el contexto
-  useEffect(() => {
-    if (songs.length > 0 && randomSongs.length > 0 && !isUpdatingRef.current) {
-      isUpdatingRef.current = true;
+  // Función para guardar nueva playlist o actualizar existente
+  const handleSavePlaylist = async (playlistName: string, selectedSongs: Song[]) => {
+    try {
+      if (editingPlaylist) {
+        // Modo edición
+        showToast('Actualizando playlist...', 'loading');
 
-      setRandomSongs(songs);
+        const songIds = selectedSongs.map(song => song.id);
+        await playlistsService.updatePlaylist(editingPlaylist.id, playlistName, songIds);
 
-      // SOLO reiniciar el reproductor si el usuario presionó "Descubre Más"
-      if (userRequestedNewSongs.current) {
-        const firstSong = songs[0];
-        loadSong(firstSong, songs);
-        userRequestedNewSongs.current = false;
+        // Cerrar modal
+        setIsModalOpen(false);
+        setEditingPlaylist(null);
+
+        // Recargar playlists
+        await loadPlaylists();
+
+        // Mostrar toast de éxito
+        showToast('¡Playlist actualizada exitosamente!', 'success');
+      } else {
+        // Modo crear - Validar límite de 15 playlists
+        const allPlaylists = await playlistsService.getAllPlaylists();
+        const userPlaylistsCount = allPlaylists.filter(p => !p.genre && !p.isPublic).length;
+
+        if (userPlaylistsCount >= 15) {
+          showToast('Máximo 15 playlists. Elimina una para crear otra.', 'error');
+          setIsCreatingPlaylist(false);
+          return;
+        }
+
+        showToast('Creando playlist...', 'loading');
+
+        // Extraer IDs de las canciones
+        const songIds = selectedSongs.map(song => song.id);
+
+        // Crear playlist en el backend
+        // TODO: Obtener userId del contexto de autenticación cuando esté disponible
+        // Por ahora, crear playlists sin userId (playlists anónimas/públicas)
+        await playlistsService.createPlaylist(playlistName, songIds, undefined);
+
+        // Cerrar modal
+        setIsModalOpen(false);
+        setIsCreatingPlaylist(false);
+
+        // Recargar playlists
+        await loadPlaylists();
+
+        // Mostrar toast de éxito
+        showToast('¡Playlist creada exitosamente!', 'success');
       }
-
-      setTimeout(() => {
-        isUpdatingRef.current = false;
-      }, 100);
+    } catch (error) {
+      console.error('Error saving playlist:', error);
+      const errorMessage = editingPlaylist ? 'Error al actualizar playlist' : 'Error al crear playlist';
+      showToast(errorMessage, 'error');
+      setIsCreatingPlaylist(false);
     }
-  }, [songs, randomSongs.length, setRandomSongs, loadSong]);
+  };
 
-  // Manejar estados de carga y error
-  if (loading) {
-    return (
-      <div className="suggestionsContainer">
-        <FavoriteSkeleton />
-      </div>
-    );
-  }
+  // Función para mostrar modal de confirmación de eliminación
+  const handleDeletePlaylist = (playlist: Playlist) => {
+    setPlaylistToDelete(playlist);
+    setConfirmDelete(true);
+  };
 
-  if (error) {
-    return (
-      <div className="suggestionsContainer">
-        <div className="error-message">
-          <h3>Error al cargar canciones</h3>
-          <p>{error}</p>
-          <button onClick={() => fetchSongs(20, 0)}>Reintentar</button>
-        </div>
-      </div>
-    );
-  }
+  // Función para confirmar eliminación
+  const confirmDeletePlaylist = async () => {
+    if (!playlistToDelete) return;
+
+    setConfirmDelete(false);
+
+    try {
+      showToast('Eliminando playlist...', 'loading');
+
+      // Eliminar del backend
+      await playlistsService.deletePlaylist(playlistToDelete.id);
+
+      // Recargar playlists
+      await loadPlaylists();
+
+      // Mostrar toast de éxito
+      showToast('Playlist eliminada exitosamente', 'success');
+    } catch (error) {
+      console.error('Error deleting playlist:', error);
+      showToast('Error al eliminar playlist', 'error');
+    } finally {
+      setPlaylistToDelete(null);
+    }
+  };
+
+  // Función para cancelar eliminación
+  const cancelDeletePlaylist = () => {
+    setConfirmDelete(false);
+    setPlaylistToDelete(null);
+  };
+
+  // Función para cerrar modal
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setIsCreatingPlaylist(false);
+  };
 
   return (
-    <div className="suggestionsContainer">
-      <div>
-        {/* Playlists */}
-        <div className="section">
-          <h3 className="sectionTitle">Playlists</h3>
+    <>
+      <div className="suggestionsContainer">
+        <div>
+          {/* Playlists */}
+          <div className="section">
+            <h3 className="sectionTitle">Playlists</h3>
 
-          {/* Contenedor con flechas de navegación */}
-          <div className="carouselContainer">
-            {/* Flecha izquierda */}
-            {showLeftArrow && (
-              <button
-                className="carouselArrow carouselArrow--left"
-                onClick={scrollLeft}
-                aria-label="Scroll left"
-              >
-                <FontAwesomeIcon icon={faChevronLeft} />
-              </button>
-            )}
-
-            {/* Grid de playlists con scroll */}
-            <div className="itemsGrid" ref={playlistsScrollRef}>
-            {loadingPlaylists ? (
-              [...Array(10)].map((_, index) => (
-                <div key={index} className="item item--loading">
-                  <div className="itemCover"></div>
-                  <p className="itemName"></p>
-                </div>
-              ))
-            ) : (
-              playlists.map((playlist) => {
-                // Verificar si esta playlist está reproduciéndose actualmente
-                const isPlayingPlaylist = currentPlaylistId === playlist.id && currentSong !== null;
-
-                return (
-                <div
-                  key={playlist.id}
-                  className={`playlistCard ${isPlayingPlaylist ? 'playlistCard--playing' : ''}`}
-                  onClick={() => handlePlayPlaylist(playlist.id)}
-                >
-                  <div className="cardCover">
-                    <PlaylistCover playlist={playlist} />
-                    <div className="playOverlay">
-                      <FontAwesomeIcon icon={faPlay} />
-                    </div>
+            {/* Grid de playlists */}
+            <div className="playlistsGrid">
+              {loadingPlaylists ? (
+                [...Array(15)].map((_, index) => (
+                  <div key={index} className="item item--loading">
+                    <div className="itemCover"></div>
+                    <p className="itemName"></p>
                   </div>
-
-                  <div className="cardContent">
-                    <h4 className="cardTitle">{playlist.name}</h4>
-                    <p className="cardSubtitle">{playlist.genre}</p>
-                    <div className="cardFooter">
-                      <span className="cardStats">
-                        {playlist.songCount} canciones
-                      </span>
-                      <button
-                        className="likeButton"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                        }}
-                      >
-                        <FontAwesomeIcon icon={faHeart} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                );
-              })
-            )}
-            </div>
-
-            {/* Flecha derecha */}
-            {showRightArrow && (
-              <button
-                className="carouselArrow carouselArrow--right"
-                onClick={scrollRight}
-                aria-label="Scroll right"
-              >
-                <FontAwesomeIcon icon={faChevronRight} />
-              </button>
-            )}
-          </div>
-        </div>
-
-        <div className="suggestionsHeader">
-          <h2 className="suggestionsTitle">Descubre Nueva Música</h2>
-          <button
-            className="discoverButton"
-            onClick={handleDiscoverNewMusic}
-            disabled={loading}
-          >
-            <FontAwesomeIcon icon={faShuffle} className="discoverButton__icon" />
-            {loading ? 'Cargando...' : 'Descubre Más'}
-          </button>
-        </div>
-
-        <div className="suggestionsGrid">
-          {(randomSongs as Song[]).map((song) => {
-            // Verificar si esta canción está reproduciéndose Y no hay playlist activa
-            const isPlaying = currentSong?.id === song.id && currentPlaylistId === null;
-
-            return (
-            <div
-              key={song.id}
-              className={`suggestionCard ${isPlaying ? 'suggestionCard--playing' : ''}`}
-              onClick={() => handlePlayRandomSong(song)}
-              style={{ cursor: 'pointer' }}
-            >
-              <div className="cardCover">
-                <div className="songCover" style={{
-                  backgroundImage: `url(https://img.youtube.com/vi/${song.youtubeId}/mqdefault.jpg)`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center'
-                }}>
-                  <div className="playOverlay">
-                    <FontAwesomeIcon icon={faPlay} />
-                  </div>
-                </div>
-              </div>
-
-              <div className="cardContent">
-                <h4 className="cardTitle">{song.title}</h4>
-                <p className="cardSubtitle">{song.artist}</p>
-                <div className="cardFooter">
-                  <span className="cardStats">
-                    {song.genre || 'Sin género'} • {Math.floor(song.duration / 60)}:{String(song.duration % 60).padStart(2, '0')}
-                  </span>
-                  <button
-                    className="likeButton"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                    }}
+                ))
+              ) : (
+                <>
+                  {/* Card para crear nueva playlist - siempre primera */}
+                  <div
+                    className={`playlistCard createPlaylistCard ${isCreatingPlaylist ? 'playlistCard--playing' : ''}`}
+                    onClick={handleCreatePlaylist}
                   >
-                    <FontAwesomeIcon icon={faHeart} />
-                  </button>
-                </div>
-              </div>
-            </div>
-            );
-          })}
-        </div>
+                    <div className="cardCover">
+                      <div className="createPlaylistCover">
+                        <FontAwesomeIcon icon={faPlus} className="createPlaylistIcon" />
+                      </div>
+                    </div>
+                    <div className="cardContent">
+                      <h4 className="cardTitle">Crear Playlist</h4>
+                    </div>
+                  </div>
 
-        {randomSongs.length === 0 && !loading && (
-          <div className="no-songs-message">
-            <p>No hay canciones disponibles. Asegúrate de que el backend esté corriendo.</p>
+                  {/* Playlists existentes */}
+                  {playlists.map((playlist) => {
+                    // Verificar si esta playlist está reproduciéndose actualmente
+                    const isPlayingPlaylist = currentPlaylistId === playlist.id && currentSong !== null;
+
+                    // Verificar si es una playlist del usuario (sin género y no pública)
+                    const isUserPlaylist = !playlist.genre && !playlist.isPublic;
+
+                    return (
+                    <div
+                      key={playlist.id}
+                      className={`playlistCard ${isPlayingPlaylist ? 'playlistCard--playing' : ''}`}
+                      onClick={() => handlePlayPlaylist(playlist.id)}
+                    >
+                      <div className="cardCover">
+                        <PlaylistCover playlist={playlist} />
+                        <div className="playOverlay">
+                          <FontAwesomeIcon icon={faPlay} />
+                        </div>
+                      </div>
+
+                      <div className="cardContent">
+                        <div className="titleRow">
+                          {/* Botón Editar */}
+                          {isUserPlaylist && (
+                            <button
+                              className="editButton"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditPlaylist(playlist);
+                              }}
+                            >
+                              <FontAwesomeIcon icon={faEdit} />
+                            </button>
+                          )}
+
+                          {/* Título de la playlist */}
+                          <h4 className="cardTitle">{playlist.name}</h4>
+
+                          {/* Botón Eliminar */}
+                          {isUserPlaylist && (
+                            <button
+                              className="deleteButton"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeletePlaylist(playlist);
+                              }}
+                            >
+                              <FontAwesomeIcon icon={faTrash} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    );
+                  })}
+                </>
+              )}
+            </div>
           </div>
-        )}
+        </div>
       </div>
-    </div>
+
+      {/* Modal para crear/editar playlist */}
+      <CreatePlaylistModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        onSave={handleSavePlaylist}
+        editingPlaylist={editingPlaylist}
+      />
+
+      {/* Modal de confirmación de eliminación */}
+      <ConfirmModal
+        isOpen={confirmDelete}
+        message={`¿Estás seguro de eliminar la playlist "${playlistToDelete?.name}"?`}
+        onConfirm={confirmDeletePlaylist}
+        onCancel={cancelDeletePlaylist}
+      />
+
+      {/* Toast notifications */}
+      <Toast
+        message={toastMessage}
+        type={toastType}
+        isVisible={isToastVisible}
+        onClose={hideToast}
+      />
+    </>
   );
 }
 
