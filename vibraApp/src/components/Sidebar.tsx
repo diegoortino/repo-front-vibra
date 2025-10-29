@@ -9,8 +9,22 @@ import { faHeart as faHeartSolid } from '@fortawesome/free-solid-svg-icons';
 import { faHeart as faHeartRegular } from '@fortawesome/free-regular-svg-icons';
 import { faUser as faUserSolid } from '@fortawesome/free-solid-svg-icons';
 import { faUser as faUserRegular } from '@fortawesome/free-regular-svg-icons';
+import { jwtDecode } from 'jwt-decode';
+
+interface DecodedToken {
+  sub: string;      // este es el user.id
+  email: string;
+  username: string;
+  iat?: number;
+  exp?: number;
+}
 
 export function Sidebar(){
+    const token = localStorage.getItem("token_vibra")
+    let decoded: DecodedToken | null = null;
+    if (token) {
+        decoded = jwtDecode<DecodedToken>(token);
+    }
     return(
         <nav className='sideBarContainer'>
             <div className='navLinks'>
@@ -34,11 +48,11 @@ export function Sidebar(){
                     {({ isActive }) => (
                         <div className='navItem'>
                             <FontAwesomeIcon icon={isActive ? faBellSolid : faBellRegular} />
-                            <p>subs</p>
+                            <p>Subs</p>
                         </div>
                     )}
                 </NavLink>
-                <NavLink to={"/account"}>
+                <NavLink to={decoded ? `/user/${decoded?.sub}` : '/login'}>
                     {({ isActive }) => (
                         <div className='navItem'>
                             <FontAwesomeIcon icon={isActive ? faUserSolid : faUserRegular} />

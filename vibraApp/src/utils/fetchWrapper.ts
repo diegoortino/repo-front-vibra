@@ -1,30 +1,42 @@
-// // src/utils/fetchWrapper.js
-// const originalFetch = window.fetch;
+// src/utils/fetchWrapper.ts
+const originalFetch = window.fetch;
 
-// window.fetch = async (input, init = {}) => {
-//   const token = localStorage.getItem('token_vibra');
+window.fetch = async (input, init = {}) => {
+  // Obtener la URL de la petición
+  const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
   
-//   // Clonamos headers y aseguramos Content-Type JSON si no existe
-//   const headers = new Headers(init.headers || {});
-//   if (!headers.has('Content-Type')) {
-//     headers.set('Content-Type', 'application/json');
-//   }
+  // Solo aplicar el wrapper a peticiones locales (tu backend)
+  const esAPILocal = url.startsWith('http://localhost:3000')
+  
+  // Si NO es API local, usar fetch original sin modificar
+  if (!esAPILocal) {
+    return originalFetch(input, init);
+  }
 
-//   if (token) {
-//     headers.set('Authorization', `Bearer ${token}`);
-//   }
+  // --- Lógica del wrapper solo para API local ---
+  const token = localStorage.getItem('token_vibra');
+  
+  // Clonamos headers y aseguramos Content-Type JSON si no existe
+  const headers = new Headers(init.headers || {});
+  if (!headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
 
-//   const newInit = { ...init, headers };
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
 
-//   const response = await originalFetch(input, newInit);
+  const newInit = { ...init, headers };
 
-//   // Si el backend responde 401, se interpreta token inválido o expirado
-//   if (response.status === 401) {
-//     console.warn('Token inválido o expirado, cerrando sesión...');
-//     localStorage.removeItem('token_vibra');
-//     window.location.href = '/login'; // redirigir a login
-//     throw new Error('Unauthorized'); // lanzar error para cumplir la firma que espera Promise<Response>
-//   }
+  const response = await originalFetch(input, newInit);
 
-//   return response;
-// };
+  // Si el backend responde 401, se interpreta token inválido o expirado
+  if (response.status === 401) {
+    console.warn('Token inválido o expirado, cerrando sesión...');
+    localStorage.removeItem('token_vibra');
+    window.location.href = '/login';
+    throw new Error('Unauthorized');
+  }
+
+  return response;
+};
