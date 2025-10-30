@@ -9,21 +9,15 @@ import { faHeart as faHeartSolid } from '@fortawesome/free-solid-svg-icons';
 import { faHeart as faHeartRegular } from '@fortawesome/free-regular-svg-icons';
 import { faUser as faUserSolid } from '@fortawesome/free-solid-svg-icons';
 import { faUser as faUserRegular } from '@fortawesome/free-regular-svg-icons';
-import { jwtDecode } from 'jwt-decode';
-
-interface DecodedToken {
-  sub: string;      // este es el user.id
-  email: string;
-  username: string;
-  iat?: number;
-  exp?: number;
-}
+import { useContext } from 'react';
+import { UserContext } from '../context/currentUserContext';
 
 export function Sidebar(){
-    const token = localStorage.getItem("token_vibra")
-    let decoded: DecodedToken | null = null;
-    if (token) {
-        decoded = jwtDecode<DecodedToken>(token);
+    const context = useContext(UserContext)
+    if(!context) throw new Error("UserContext must be used inside a UserProvider");
+    const { user } = context;
+    if (!user) {
+        return null;
     }
     return(
         <nav className='sideBarContainer'>
@@ -50,9 +44,9 @@ export function Sidebar(){
                             <FontAwesomeIcon icon={isActive ? faBellSolid : faBellRegular} />
                             <p>Subs</p>
                         </div>
-                    )}
+                    )}  
                 </NavLink>
-                <NavLink to={decoded ? `/user/${decoded?.sub}` : '/login'}>
+                <NavLink onClick={()=>console.log(user)} to={user && user.userId ? `/user/${user.userId}` : '/a'} >
                     {({ isActive }) => (
                         <div className='navItem'>
                             <FontAwesomeIcon icon={isActive ? faUserSolid : faUserRegular} />
