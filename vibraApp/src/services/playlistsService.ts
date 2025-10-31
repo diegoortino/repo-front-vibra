@@ -4,10 +4,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 // Configurar axios para incluir el token automáticamente
 axios.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token_vibra');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+  config.withCredentials= true
   return config;
 }, (error) => {
   return Promise.reject(error);
