@@ -27,7 +27,6 @@ export function ProfileSkeleton() {
         <div className="contentSections">
           {/* Historial Skeleton */}
           <div className="section">
-            <div className="skeleton skeleton-title"></div>
             <div className="itemsGrid">
               {[...Array(3)].map((_, index) => (
                 <div key={index} className="item">
@@ -43,7 +42,6 @@ export function ProfileSkeleton() {
 
           {/* Imágenes Skeleton */}
           <div className="section">
-            <div className="skeleton skeleton-title"></div>
             <div className="itemsGrid">
               {[...Array(3)].map((_, index) => (
                 <div key={index} className="item">

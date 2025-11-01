@@ -10,33 +10,26 @@ type Props = {
 export function LoginModal({ isOpen, onClose, onOpenRegister}: Props) {
     if (!isOpen) return null
 
-    const handleSuccess = async(credentialResponse: CredentialResponse) => {
+    const handleSuccess = async (credentialResponse: CredentialResponse) => {
         console.log('Logeado :thumbUp:');
 
-        const googleToken =credentialResponse.credential
+        const googleToken = credentialResponse.credential;
 
-        //cuando deploy cambiar a .env
         const response = await fetch('http://localhost:3000/auth/google', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                id_token: googleToken
-            })
+            credentials: 'include',            
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id_token: googleToken }),
         });
 
         if (!response.ok) {
             throw new Error('Error en la autenticación');
         }
 
-        const data= await response.json()
-        console.log("respuesta del back" +  JSON.stringify(data, null, 2))
-        localStorage.setItem("token_vibra",data.token)
-
-        // Redirigir a la app principal (vibraApp)
-        window.location.href = "http://localhost:5174"
+        // Redirigir a la app principal
+        window.location.href = 'http://localhost:5174';
     };
+
     const handleError = () => {
         console.log('Login Failed');
     };

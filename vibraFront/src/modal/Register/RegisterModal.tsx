@@ -17,24 +17,16 @@ export function RegisterModal({ isOpen, onClose,onOpenLogin }: Props) {
     
             const response = await fetch('http://localhost:3000/auth/google', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    id_token: googleToken
-                })
+                credentials: 'include',            
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id_token: googleToken }),
             });
     
             if (!response.ok) {
                 throw new Error('Error en la autenticación');
             }
-    
-            const data= await response.json()
-            console.log("respuesta del back" +  JSON.stringify(data, null, 2))
-            localStorage.setItem("token_vibra",data.token)
+            window.location.href = "http://localhost:5174";
 
-            // Redirigir a la app principal (vibraApp)
-            window.location.href = "http://localhost:5174"
         };
         const handleError = () => {
             console.log('Login Failed');

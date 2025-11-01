@@ -11,6 +11,7 @@
     border-right: 1px solid rgb(60, 60, 60);
     background-color: #141418; /* opcional */
     z-index: 40; /* por debajo del MusicPlayer (que está en 50 o 100) */
+    text-align: center;
 }
 .navLinks{
     display: flex;

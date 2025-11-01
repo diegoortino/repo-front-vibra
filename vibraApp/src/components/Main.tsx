@@ -121,7 +121,7 @@ const Main = () => {
         } />
 
         {/* Rutas existentes */}
-        <Route path="/account" element={<Profile/>} />
+        <Route path="/user/:userId" element={<Profile/>} />
         <Route path="/favorites" element={<Favorites/>} />
         <Route path="/follows" element={<Follows/>} />
       </Routes>
