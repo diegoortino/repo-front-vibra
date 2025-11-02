@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import type { Song } from "../types";
+import { UserContext } from "./currentUserContext";
 
 export type Track = Partial<Song> & {
   youtubeId: string;
@@ -121,7 +122,13 @@ export const MusicProvider = ({
     },
     []
   );
+  const userContext = useContext(UserContext)!;
 
+  if (!userContext) {
+    console.error("UserContext no está disponible");
+  }
+
+  const { user } = userContext; // ✅ TypeScript ahora sabe que userContext no es undefined
   useEffect(() => {
     // Si el provider recibe nuevas pistas iniciales y todavía no hay playlist activa,
     // usamos ese valor por defecto.
@@ -221,10 +228,25 @@ export const MusicProvider = ({
   );
 
   const playSong = useCallback(
-    (song: Song, songsLista?: Song[]) => {
+    async (song: Song, songsLista?: Song[]) => {
       actualizarPlaylistConCancion(song, songsLista, true);
+       if (!user?.userId) return;
+
+      try {
+        await fetch("http://localhost:3000/user-history", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user: { id: user.userId },
+            songId: song.id ?? undefined,   // solo si existe en DB
+            youtubeId: song.youtubeId       // siempre presente
+          }),
+        });
+        } catch (err) {
+          console.error("Error al registrar canción en historial:", err);
+        }
     },
-    [actualizarPlaylistConCancion]
+    [actualizarPlaylistConCancion,user]
   );
 
   const setRandomSongs = useCallback((songs: Song[]) => {
