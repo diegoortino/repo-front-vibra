@@ -4,4 +4,7 @@ export interface ResultProps {
 	artist: string;
 	duration: string;
 	plays: string;
+	youtubeId?: string;
+	cloudinaryUrl?: string;
+	source?: 'database' | 'youtube';
 }

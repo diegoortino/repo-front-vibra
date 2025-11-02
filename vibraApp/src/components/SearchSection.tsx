@@ -1,86 +1,96 @@
-/* 
+/*
   SearchSection.tsx
  */
 
 /* Dependencies  */
 import { useContext, useEffect, useState } from "react";
 
-import ErrorBoundary from "./ErrorBoundary";
-
-/* types */
-import type {DynamicProps} from "../types/dynamicProps";
-import type {SearchProps} from "../types/searchProps";
-import type {SearchSectionProps} from "../types/searchSectionProps";
-
 /* hooks */
 import SearchContext from "../hooks/searchContext";
 
-/* Components */
-
 /* styles */
+import './search-section.css';
 
-// const SearchSection =(props:SearchSectionProps) => {
-const SearchSection =() => {
+const SearchSection = () => {
+  const { dataToSearch } = useContext(SearchContext);
+  const [valueCurrent, setValueCurrent] = useState("");
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
 
-  const {dataToSearch,toResoult} = useContext(SearchContext);
-  const [valueCurrent, setValueCurrent]:[string,any] = useState("");
-  const [trent, setTrent]:[DynamicProps[],any] = useState([]);
-  const URL="/data/data.json";
-  const ENTITY='/trent';
   useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.search-container')) {
+        setShowSuggestions(false);
+      }
+    };
 
-    fetch(URL)
-      .then(response => response.json())
-      .then(data => {
-        console.log(data);
-        //console.log(data.subjets);
-        // Usar 'most' en lugar de 'trent' que no existe en el JSON
-        setTrent(data.most || []);
-        //console.log(subjets);
-      })
-      .catch(error => {
-        console.log('Error fetching data:', error);
-        setTrent([]); // Inicializar con array vacío en caso de error
-      });
+    if (showSuggestions) {
+      document.addEventListener('click', handleClickOutside);
+    }
 
-  }, []);// on render
-    //dataDynamicSearch={handleChildDynamicSearch}   
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [showSuggestions]);
 
-  /* sendDataToParent */
   const handleSearchSubmit = (event:any) => {
     event.preventDefault();
-    //console.log(data);
-    if(event.target["search"].value.length)
-      dataToSearch({search:event.target["search"].value}); //callback func(searchProp object)
+
+    setIsSearching(true);
+    setTimeout(() => {
+      setIsSearching(false);
+    }, 300);
+
+    if(event.target["search"].value.length) {
+      dataToSearch({search:event.target["search"].value});
+    }
     setValueCurrent(event.target["search"].value);
   };
 
-  /* auto complete and search */
-  const handleInputChange = (event:any) => {
-      // En onChange el target es el input directamente, no el form
-      setValueCurrent(event.target.value);
+  const handleInputChange = async (event:any) => {
+      const value = event.target.value;
+      setValueCurrent(value);
+      if (value.length >= 2) {
+        setIsLoadingSuggestions(true);
+
+        try {
+          const response = await fetch(`http://localhost:3000/music/autocomplete?query=${encodeURIComponent(value)}&limit=5`);
+          const data = await response.json();
+
+          if (Array.isArray(data) && data.length > 0) {
+            setSuggestions(data);
+            setShowSuggestions(true);
+          } else {
+            setSuggestions([]);
+            setShowSuggestions(false);
+          }
+        } catch (error) {
+          console.error('Error fetching autocomplete:', error);
+          setSuggestions([]);
+          setShowSuggestions(false);
+        } finally {
+          setIsLoadingSuggestions(false);
+        }
+      } else {
+        setSuggestions([]);
+        setShowSuggestions(false);
+      }
   };
 
-  const handleClickSuggestion = (event:any) => {
-    event.preventDefault();
-    toResoult(JSON.parse(event.target.firstChild.value));
+  const handleSuggestionClick = (suggestion: string) => {
+    setValueCurrent(suggestion);
+    setSuggestions([]);
+    setShowSuggestions(false);
+    dataToSearch({search: suggestion});
   };
 
-/* auto complete and search */
-const renderSuggestion = (datum:DynamicProps) => {
-  if (datum.hasOwnProperty("id"))
-    return (<div  key={datum.id}
-                  id={datum.id}  
-                  className="suggestion-tag"
-                  onClick={handleClickSuggestion}>
-                  <input type="hidden" value={`{"id":"${datum.id}",
-                                              "title":"${datum.title}",
-                                              "artist":"${datum.artist}",
-                                              "duration":"${datum.duration}",
-                                              "plays":"${datum.plays}"}`}></input>
-                  {datum.title}
-              </div>
-         );
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Escape') {
+      setShowSuggestions(false);
+    }
   };
 
   return (
@@ -99,14 +109,58 @@ const renderSuggestion = (datum:DynamicProps) => {
                       id="searchInput"
                       autoComplete="off"
                       onChange={handleInputChange}
+                      onKeyDown={handleKeyDown}
                       value={valueCurrent}
                       name="search"
                   />
 
-                  <button type="submit" className="search-btn" id="searchBtn">
+                  <button type="submit" className={`search-btn ${isSearching ? 'search-btn--searching' : ''}`} id="searchBtn">
                     Buscar
                   </button>
               </form>
+
+              {(showSuggestions || isLoadingSuggestions) && (
+                <div style={{
+                  position: 'absolute',
+                  backgroundColor: '#1a1a1a',
+                  border: '1px solid #333',
+                  borderRadius: '8px',
+                  marginTop: '4px',
+                  maxHeight: '200px',
+                  overflowY: 'auto',
+                  zIndex: 1000,
+                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
+                  width: 'calc(100% - 32px)'
+                }}>
+                  {isLoadingSuggestions ? (
+                    <div style={{
+                      padding: '12px 16px',
+                      color: '#999',
+                      textAlign: 'center'
+                    }}>
+                      Buscando...
+                    </div>
+                  ) : suggestions.length > 0 ? (
+                    suggestions.map((suggestion, index) => (
+                      <div
+                        key={index}
+                        onClick={() => handleSuggestionClick(suggestion)}
+                        style={{
+                          padding: '12px 16px',
+                          cursor: 'pointer',
+                          borderBottom: index < suggestions.length - 1 ? '1px solid #333' : 'none',
+                          transition: 'background-color 0.2s',
+                          color: '#fff'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2a2a2a'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        🎵 {suggestion}
+                      </div>
+                    ))
+                  ) : null}
+                </div>
+              )}
           </div>
       </section>
     </>

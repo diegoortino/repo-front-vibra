@@ -41,35 +41,40 @@ const Main = () => {
   const [dataFromSearch, setDataFromSearch] = useState<ResultProps[]>(dataToSearch_0);
 
   const dataToSearch = (key: SearchProps) => {
-    // Buscar en la base de datos (canciones con Cloudinary)
-    let uri = "http://localhost:3000";
+    // Obtener URL del backend desde variable de entorno o usar localhost por defecto
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
-    // Usar search-optimized buscando solo por artista (más flexible)
-    // Si el usuario quiere buscar por canción específica, puede escribir "artista - canción"
-    fetch(uri + "/music/search-optimized?artist=" + encodeURIComponent(key.search) + "&limit=20")
+    // Usar search-smart: busca en BD + YouTube, auto-guarda resultados
+    fetch(apiUrl + "/music/search-smart?query=" + encodeURIComponent(key.search) + "&maxResults=20")
       .then(response => response.json())
       .then(data => {
-        console.log('📥 Datos recibidos del backend:', data);
-        // Verificar si es un array (éxito) o un objeto con error
-        if (Array.isArray(data)) {
-          // Mapear los datos del backend al formato que espera el frontend
-          const mappedData = data.map((song: any) => ({
-            id: song.id,
+        // search-smart devuelve: { fromDatabase: [], fromYoutube: [], source: string, total: number }
+        if (data.fromDatabase || data.fromYoutube) {
+          // Combinar resultados de BD y YouTube
+          const allSongs = [
+            ...(data.fromDatabase || []),
+            ...(data.fromYoutube || [])
+          ];
+
+          // Mapear los datos al formato que espera el frontend
+          const mappedData: ResultProps[] = allSongs.map((song: any) => ({
+            id: song.id || song.youtubeId, // BD usa 'id' (UUID), YouTube usa 'id' (videoId)
             title: song.title,
             artist: song.artist,
-            duration: song.duration.toString(), // Convertir número a string
-            plays: song.viewCount?.toString() || "0" // viewCount -> plays
+            duration: song.duration?.toString() || "0",
+            plays: song.viewCount?.toString() || song.plays?.toString() || "0",
+            youtubeId: song.youtubeId || song.id, // BD tiene 'youtubeId', YouTube solo tiene 'id'
+            cloudinaryUrl: song.cloudinaryUrl || null, // Solo las de BD tienen MP3
+            source: (song.cloudinaryUrl ? 'database' : 'youtube') as 'database' | 'youtube' // Para distinguir en el frontend
           }));
-          console.log('✅ Datos mapeados para frontend:', mappedData);
+
           setDataFromSearch(mappedData);
         } else {
-          // Es un error del backend
-          console.log('❌ Error del backend:', data.message || data.error);
+          // Respuesta inesperada
           setDataFromSearch(dataToSearch_0);
         }
       })
-      .catch(error => {
-        console.log('❌ Error fetching data:', error);
+      .catch(() => {
         setDataFromSearch(dataToSearch_0);
       });
   };
@@ -88,13 +93,14 @@ const Main = () => {
       // Necesitamos convertir el resultado de búsqueda a tipo Song
       const song = dataFromSearch.find(s => s.id === key.id);
       if (song) {
-        // Mapear de ResultProps a Song
+        // Mapear de ResultProps a Song con TODOS los campos necesarios
         playSong({
           id: song.id,
           title: song.title,
           artist: song.artist,
           duration: parseInt(song.duration) || 0,
-          // Campos adicionales que Song requiere (ajusta según tu tipo Song)
+          youtubeId: song.youtubeId, // CRÍTICO: necesario para reproducir
+          cloudinaryUrl: song.cloudinaryUrl, // CRÍTICO: necesario para reproducir desde Cloudinary
         } as any);
       }
     }

@@ -67,7 +67,6 @@ export function MusicPlayer() {
   /* === Context ============================================================ */
   const {
     playlist,
-    currentSong,
     indiceActual,
     setIndiceActual,
     urlsImagenes,
@@ -94,7 +93,6 @@ export function MusicPlayer() {
   // Visualizador: índice actual + timer 5s
   const [mostrarVisualizador, setMostrarVisualizador] = useState(false);
   const [indiceImagen, setIndiceImagen] = useState(0);
-  const animacionTimeoutRef = useRef<number | null>(null);
 
   // Panel y lista
   const [panelMovilExpandido, setPanelMovilExpandido] = useState(false);
@@ -103,13 +101,12 @@ export function MusicPlayer() {
   // Metadatos oEmbed fallback
   const [detallesCanciones, setDetallesCanciones] = useState<Record<string, { titulo?: string; autor?: string; mini?: string }>>({});
 
-  const [uiProgress, setUiProgress] = useState({
-    t: 0,    // segundos actuales
-    d: 0,    // duración en segundos
-    pct: 0,  // porcentaje 0..100
-  });
-
   const [volume, setVolume] = useState(1); // 0..1
+  const [isMuted, setIsMuted] = useState(false); // Estado de mute
+  const previousVolumeRef = useRef(1); // Guardar volumen antes de mute
+
+  // Estado para forzar re-render del progreso
+  const [, forceUpdate] = useState(0);
 
   /* === Derivados ========================================================== */
 
@@ -135,12 +132,16 @@ export function MusicPlayer() {
       playlist.map((song, index) => {
         const id = song.id || song.youtubeId || `track-${index}`;
         const detalles = detallesCanciones[id];
+        // Construir miniatura: si tiene youtubeId, usar imagen de YouTube
+        const miniatura = song.youtubeId
+          ? `https://img.youtube.com/vi/${song.youtubeId}/mqdefault.jpg`
+          : detalles?.mini;
         return {
           id,
           titulo: (song.title || detalles?.titulo || `Canción ${index + 1}`),
           autor: (song.artist || detalles?.autor || ""),
           index,
-          mini: song.cloudinaryUrl ? song.cloudinaryUrl : detalles?.mini,
+          mini: miniatura,
         };
       }),
     [playlist, detallesCanciones]
@@ -165,23 +166,48 @@ export function MusicPlayer() {
         // Si YouTube: montamos YT.Player en su contenedor
         if (target.backend === "youtube" && mountIn && !target.player) {
           await cargarAPIYouTube();
-          const p = new window.YT.Player(mountIn, {
-            height: "0",
-            width: "0",
-            playerVars: {
-              controls: 0,
-              disablekb: 1,
-              fs: 0,
-              iv_load_policy: 3,
-              rel: 0,
-              modestbranding: 1,
-            },
-            events: {},
+
+          // Crear una promesa que se resuelve cuando el player está listo
+          await new Promise<void>((resolve) => {
+            const p = new window.YT.Player(mountIn, {
+              height: "0",
+              width: "0",
+              playerVars: {
+                controls: 0,
+                disablekb: 1,
+                fs: 0,
+                iv_load_policy: 3,
+                rel: 0,
+                modestbranding: 1,
+              },
+              events: {
+                onReady: () => {
+                  slotsRef.current[slot].player = p;
+                  resolve();
+                },
+                onError: (event: any) => {
+                  // Códigos de error de YouTube:
+                  // 100: Video no encontrado o privado
+                  // 101/150: Video no permite embedding
+                  if (event.data === 100 || event.data === 101 || event.data === 150) {
+                    // Auto-skip a la siguiente canción
+                    if (slot === "current") {
+                      setTimeout(() => {
+                        const nextIdx = Math.min(indiceActual + 1, playlist.length - 1);
+                        if (nextIdx !== indiceActual) {
+                          setIndiceActual(nextIdx);
+                          setReproduciendo(true);
+                        }
+                      }, 1000);
+                    }
+                  }
+                }
+              },
+            });
           });
-          slotsRef.current[slot].player = p;
         }
       },
-      cue(slot: Slot, target: SlotState) {
+      cue(_slot: Slot, target: SlotState) {
         if (target.backend === "cloudinary") {
           const a: HTMLAudioElement = target.player;
           if (!a) return;
@@ -190,11 +216,11 @@ export function MusicPlayer() {
           a.pause();
         } else if (target.backend === "youtube") {
           const p = target.player;
-          if (!p) return;
+          if (!p || !p.cueVideoById) return;
           if (target.youtubeId) p.cueVideoById(target.youtubeId);
         }
       },
-      load(slot: Slot, target: SlotState, autoplay: boolean) {
+      load(_slot: Slot, target: SlotState, autoplay: boolean) {
         if (target.backend === "cloudinary") {
           const a: HTMLAudioElement = target.player;
           if (!a) return;
@@ -204,7 +230,7 @@ export function MusicPlayer() {
           else a.pause();
         } else if (target.backend === "youtube") {
           const p = target.player;
-          if (!p) return;
+          if (!p || !p.loadVideoById || !p.cueVideoById) return;
           if (target.youtubeId) {
             if (autoplay) p.loadVideoById(target.youtubeId);
             else p.cueVideoById(target.youtubeId);
@@ -216,7 +242,10 @@ export function MusicPlayer() {
           const a: HTMLAudioElement = target.player;
           a?.play().catch(() => {});
         } else if (target.backend === "youtube") {
-          target.player?.playVideo?.();
+          const p = target.player;
+          if (p && typeof p.playVideo === 'function') {
+            p.playVideo();
+          }
         }
       },
       pause(target: SlotState) {
@@ -224,7 +253,10 @@ export function MusicPlayer() {
           const a: HTMLAudioElement = target.player;
           a?.pause();
         } else if (target.backend === "youtube") {
-          target.player?.pauseVideo?.();
+          const p = target.player;
+          if (p && typeof p.pauseVideo === 'function') {
+            p.pauseVideo();
+          }
         }
       },
       getCurrentTime(target: SlotState): number {
@@ -251,7 +283,7 @@ export function MusicPlayer() {
           target.player?.seekTo?.(seconds, true);
         }
       },
-      onEnded(slot: Slot, target: SlotState, cb: () => void) {
+      onEnded(_slot: Slot, target: SlotState, cb: () => void) {
         // Limpia listeners previos y vuelve a agregar
         if (target.backend === "cloudinary") {
           const a: HTMLAudioElement = target.player;
@@ -287,6 +319,7 @@ export function MusicPlayer() {
         const i = slots[slot].idx;
         const backend = backendDeCancion(i);
         const keys = mediaKeys(i);
+
         slotsRef.current[slot] = {
           backend,
           youtubeId: keys.youtubeId,
@@ -326,11 +359,12 @@ export function MusicPlayer() {
     if (usaYT) cargarAPIYouTube();
   }, [playlist]);
 
-  // Preparar slots al cambiar de pista o autoplay requerido
+  // Preparar slots SOLO al cambiar de pista (no en play/pause)
   useEffect(() => {
     const autoplay = reproduciendo; // si el estado global dice reproduciendo, cargamos reproduciendo
     prepararSlots(indiceActual, autoplay);
-  }, [indiceActual, reproduciendo, prepararSlots]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [indiceActual]); // Solo cuando cambia el índice
 
   // Responder a cambios de reproduciendo (play/pause) en el slot current
   useEffect(() => {
@@ -349,10 +383,8 @@ export function MusicPlayer() {
     const d = backendAPI.getDuration(cur) || 0;
     progresoSegundosRef.current = t;
     duracionSegundosRef.current = d;
-
-    const pct = d > 0 ? Math.min(100, (t / d) * 100) : 0;
-    // <-- ESTO fuerza el re-render y mueve el slider / refresca tiempos
-    setUiProgress({ t, d, pct });
+    // Forzar re-render para actualizar UI
+    forceUpdate(prev => prev + 1);
   }, [backendAPI]);
 
   useEffect(() => {
@@ -398,22 +430,40 @@ export function MusicPlayer() {
     backendAPI.seekTo(cur, nuevo);
   };
 
-const onChangeVolume = (e: ChangeEvent<HTMLInputElement>) => {
-  const v = Math.min(1, Math.max(0, Number(e.target.value) || 0));
-  setVolume(v); // ← AGREGAR ESTA LÍNEA
-  const aplicar = (s: SlotState) => {
-    if (s.backend === "cloudinary") {
-      const a: HTMLAudioElement = s.player;
-      if (a) a.volume = v;
-    } else if (s.backend === "youtube") {
-      // API YT: 0-100
-      s.player?.setVolume?.(Math.round(v * 100));
+  const onChangeVolume = (e: ChangeEvent<HTMLInputElement>) => {
+    const v = Math.min(1, Math.max(0, Number(e.target.value) || 0));
+    setVolume(v);
+    if (v > 0) setIsMuted(false); // Si cambias el volumen manualmente, desmutear
+  };
+
+  const toggleMute = () => {
+    if (isMuted) {
+      // Desmutear: restaurar volumen anterior
+      setVolume(previousVolumeRef.current);
+      setIsMuted(false);
+    } else {
+      // Mutear: guardar volumen actual y poner a 0
+      previousVolumeRef.current = volume;
+      setVolume(0);
+      setIsMuted(true);
     }
   };
-  aplicar(slotsRef.current.current);
-  aplicar(slotsRef.current.prev);
-  aplicar(slotsRef.current.next);
-};
+
+  // Efecto para aplicar volumen a todos los players cuando cambia
+  useEffect(() => {
+    const aplicar = (s: SlotState) => {
+      if (s.backend === "cloudinary") {
+        const a: HTMLAudioElement = s.player;
+        if (a) a.volume = volume;
+      } else if (s.backend === "youtube") {
+        // API YT: 0-100
+        s.player?.setVolume?.(Math.round(volume * 100));
+      }
+    };
+    aplicar(slotsRef.current.current);
+    aplicar(slotsRef.current.prev);
+    aplicar(slotsRef.current.next);
+  }, [volume]);
 
   const alternarLista = () =>
     setMostrarLista((prev) => {
@@ -610,7 +660,6 @@ const onChangeVolume = (e: ChangeEvent<HTMLInputElement>) => {
                 onChange={onChangeProgress}
                 className="Reproductor__BarraProgreso"
                 aria-label="Barra de progreso"
-                style={{}}
               />
               <div className="Reproductor__Tiempo Reproductor__TiempoTotal">{duracion}</div>
             </div>
@@ -621,13 +670,11 @@ const onChangeVolume = (e: ChangeEvent<HTMLInputElement>) => {
             <button
               type="button"
               className="Reproductor__VolumenBtn"
-              onClick={() => {
-                /* simple toggle: si se desea implementar mute global, gestionar estado arriba */
-              }}
-              aria-label="Alternar sonido"
-              title="Alternar sonido"
+              onClick={toggleMute}
+              aria-label={isMuted ? "Activar sonido" : "Silenciar"}
+              title={isMuted ? "Activar sonido" : "Silenciar"}
             >
-              <span aria-hidden="true">🔊</span>
+              <span aria-hidden="true">{isMuted || volume === 0 ? "🔇" : volume < 0.5 ? "🔉" : "🔊"}</span>
             </button>
 
             <input
@@ -636,10 +683,9 @@ const onChangeVolume = (e: ChangeEvent<HTMLInputElement>) => {
               min={0}
               max={1}
               step={0.01}
-              value={volume}  // ← CAMBIAR DE value={1} A value={volume}
+              value={volume}
               onChange={onChangeVolume}
               aria-label="Control de volumen"
-              style={{}}
             />
 
             <div className={`Reproductor__ControlListaWrapper ${mostrarLista ? "is-open" : ""}`}>

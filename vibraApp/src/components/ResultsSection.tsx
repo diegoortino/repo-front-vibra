@@ -1,122 +1,151 @@
-/* 
+/*
   ResultsSection.tsx
  */
 
 /* Dependencies  */
 import { useContext, useEffect, useState } from "react";
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faPlay } from '@fortawesome/free-solid-svg-icons';
 
 /* types */
 import type {ResultProps} from "../types/resultProps";
 
 /* hooks */
 import SearchContext from "../hooks/searchContext";
-
-
-/* Components */
+import { useMusicContext } from "../context/MusicContext";
 
 /* styles */
-//props:{playTrack:any,dataRecive:ResultProps[]}
-const ResultsSection =() => {
+import './FavPage/Favorites.css';
 
-    const {toReproduce,dataFromSearch} = useContext(SearchContext);
-    const vSt:string[]=["init","result","results","notFound"];
-    const [state,setState]=useState(vSt[0]);
-          
-    useEffect(()=>{
-        //console.log("Result",props.dataRecive,props.dataRecive.hasOwnProperty("id"));
-        console.log("state: "+state);
-        if (dataFromSearch instanceof Array){
+const ResultsSection = () => {
+    const {toReproduce, dataFromSearch} = useContext(SearchContext);
+    const { currentSong } = useMusicContext();
+    const vSt: string[] = ["init", "result", "results", "notFound"];
+    const [state, setState] = useState(vSt[0]);
+
+    useEffect(() => {
+        console.log("state: " + state);
+        if (Array.isArray(dataFromSearch)) {
           console.log("Array");
-          if(dataFromSearch.length === 0 || dataFromSearch[0].id==="") {
-            /*not found something */ 
+          if (dataFromSearch.length === 0 || dataFromSearch[0].id === "") {
             setState(vSt[3]);
-          }else{
-            /*at least some one */
+          } else if (dataFromSearch.length === 1) {
+            setState(vSt[1]);
+          } else {
             setState(vSt[2]);
           }
-        }else if (dataFromSearch instanceof Object && dataFromSearch.hasOwnProperty("id") && dataFromSearch.id!=""){//object
-            /*only one*/
-           console.log("Object");
-           setState(vSt[1]);
-        }else{
+        } else {
            setState(vSt[3]);
         }
-      }
-      ,[dataFromSearch]);// on mount and change
+      }, [dataFromSearch]);
 
-    const handleClickPlayTrack = (event:any) => {
-      event.preventDefault();
-      //console.log(event.target.parentElement.parentElement);
-      if (event.target.parentElement.parentElement.hasAttribute("data-track-id"))        
-        toReproduce({ id: event.target.parentElement.parentElement.getAttribute("data-track-id") });
+    const handleClickPlayTrack = (datum: ResultProps) => {
+      toReproduce({ id: datum.id });
     };
 
-    const displayResults= () => {
-
+    const displayResults = () => {
       switch (state) {
         case "init":
             return null;
-          break;
         case "result":
-            var data:ResultProps=dataFromSearch;
-            //console.log("result",dataFromSearch,data);
+            const data: ResultProps = Array.isArray(dataFromSearch) ? dataFromSearch[0] : dataFromSearch;
+            const isPlayingSingle = currentSong?.id === data.id;
             return (
-              <div id="" className="results-grid">
-                <div className="result-card" data-track-id={data.id}>
-                  <div className="result-thumbnail"></div>
-                  <div className="result-info">
-                    <h3 className="result-title">{data.title}</h3>
-                    <p className="result-artist">{data.artist}</p>
-                    <p className="result-duration">{data.duration}s</p>
-                    <button className="play-btn" onClick={handleClickPlayTrack}>
-                      Reproducir
-                    </button>
+              <div className="suggestionsGrid">
+                <div
+                  key={data.id}
+                  className={`suggestionCard ${isPlayingSingle ? 'suggestionCard--playing' : ''}`}
+                  onClick={() => handleClickPlayTrack(data)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <div className="cardCover">
+                    <div
+                      className="songCover"
+                      style={{
+                        backgroundImage: `url(https://img.youtube.com/vi/${data.youtubeId}/mqdefault.jpg)`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center'
+                      }}
+                    >
+                      <div className="playOverlay">
+                        <FontAwesomeIcon icon={faPlay} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="cardContent">
+                    <h4 className="cardTitle">{data.title}</h4>
+                    <p className="cardSubtitle">{data.artist}</p>
+                    <div className="cardFooter">
+                      <span className="cardStats">
+                        {Math.floor(parseInt(data.duration) / 60)}:{String(parseInt(data.duration) % 60).padStart(2, '0')}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
             );
-          break;
         case "results":
-            return(
-              <div className="results-grid">
-                { dataFromSearch.map((datum:ResultProps) =>
-                    <div key={datum.id} className="result-card" data-track-id={datum.id}>
-                      <div className="result-thumbnail"></div>
-                      <div className="result-info">
-                        <h3 className="result-title">{datum.title}</h3>
-                        <p className="result-artist">{datum.artist}</p>
-                        <p className="result-duration">{datum.duration}s</p>
-                        <button className="play-btn" onClick={handleClickPlayTrack}>
-                          Reproducir
-                        </button>
+            return (
+              <div className="suggestionsGrid">
+                {dataFromSearch.map((datum: ResultProps) => {
+                    const isPlaying = currentSong?.id === datum.id;
+                    return (
+                    <div
+                      key={datum.id}
+                      className={`suggestionCard ${isPlaying ? 'suggestionCard--playing' : ''}`}
+                      onClick={() => handleClickPlayTrack(datum)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <div className="cardCover">
+                        <div
+                          className="songCover"
+                          style={{
+                            backgroundImage: `url(https://img.youtube.com/vi/${datum.youtubeId}/mqdefault.jpg)`,
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center'
+                          }}
+                        >
+                          <div className="playOverlay">
+                            <FontAwesomeIcon icon={faPlay} />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="cardContent">
+                        <h4 className="cardTitle">{datum.title}</h4>
+                        <p className="cardSubtitle">{datum.artist}</p>
+                        <div className="cardFooter">
+                          <span className="cardStats">
+                            {Math.floor(parseInt(datum.duration) / 60)}:{String(parseInt(datum.duration) % 60).padStart(2, '0')}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  ) }
-              </div>)
-            ;
-          break;
+                    );
+                })}
+              </div>
+            );
         case "notFound":
           return null;
-          break;
-      
         default:
           break;
       }
     };
 
-    const Results=()=>{
+    const Results = () => {
       return displayResults();
     };
-    
-    return(
-          <>
-            <section className="results-section">
-              <div id="searchResults">
-                <Results/>                
-              </div>
-            </section>
-          </>);    
 
+    return (
+      <>
+        <section className="suggestionsContainer">
+          <div id="searchResults">
+            <Results/>
+          </div>
+        </section>
+      </>
+    );
 }
 
 export default ResultsSection;
