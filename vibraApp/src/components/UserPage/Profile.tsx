@@ -250,16 +250,19 @@ export function Profile() {
                         </p>
                         <p className="itemArtist">{item.song?.artist || 'Artista'}</p>
                       </div>
-                      <button
-                              className="deleteButton"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                let songToDeletePar={"id":item.id, "name":item.song?.title};
-                                handleDeletePlaylist(songToDeletePar);
-                              }}
-                            >
-                              <FontAwesomeIcon icon={faTrash} />
-                            </button>
+                      {isOwnProfile && (
+                        <button
+                            className="deleteButton"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              let songToDeletePar={"id":item.id, "name":item.song?.title};
+                              handleDeletePlaylist(songToDeletePar);
+                            }}
+                          >
+                            <FontAwesomeIcon icon={faTrash} />
+                        </button>
+
+                      )}
                     </div>
                   </div>
                 );
