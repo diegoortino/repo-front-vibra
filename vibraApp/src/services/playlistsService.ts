@@ -35,9 +35,28 @@ export interface PlaylistWithSongs extends Playlist {
   songs: any[];
 }
 
+export interface PlaylistFilters {
+  userId?: string;
+  isPublic?: boolean;
+}
+
 export const playlistsService = {
-  async getAllPlaylists(): Promise<Playlist[]> {
-    const response = await axios.get(`${API_URL}/playlists`);
+  async getAllPlaylists(filters?: PlaylistFilters): Promise<Playlist[]> {
+    const params = new URLSearchParams();
+
+    if (filters?.userId) {
+      params.append('userId', filters.userId);
+    }
+
+    if (filters?.isPublic !== undefined) {
+      params.append('isPublic', String(filters.isPublic));
+    }
+
+    const url = params.toString()
+      ? `${API_URL}/playlists?${params.toString()}`
+      : `${API_URL}/playlists`;
+
+    const response = await axios.get(url);
     return response.data;
   },
 

@@ -8,13 +8,19 @@ import { ConfirmModal } from '../ConfirmModal/ConfirmModal';
 import { Toast } from '../Toast/Toast';
 import type { ToastType } from '../Toast/Toast';
 import { useMusicContext } from '../../context/MusicContext';
+import { UserContext } from '../../context/currentUserContext';
 import { playlistsService } from '../../services/playlistsService';
 import type { Playlist, PlaylistWithSongs } from '../../services/playlistsService';
 import type { Song } from '../../types';
+import { useContext } from 'react';
 
 export function Favorites() {
   // Context para reproducir playlists
   const { playSong, currentSong, currentPlaylistId, setCurrentPlaylistId } = useMusicContext();
+
+  // Context para obtener el usuario actual
+  const userContext = useContext(UserContext);
+  const userId = userContext?.user?.userId;
 
   // Estado para playlists
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
@@ -36,25 +42,29 @@ export function Favorites() {
   const loadPlaylists = async () => {
     try {
       setLoadingPlaylists(true);
-      const data = await playlistsService.getAllPlaylists();
 
-      // Separar playlists de usuario (sin género y no públicas)
-      const userPlaylists = data.filter(p => !p.genre && !p.isPublic);
-
-      // Separar playlists públicas (con género, públicas, con canciones)
-      const publicPlaylists = data.filter(p =>
-        p.isPublic &&
-        p.genre &&
-        (p.songCount || 0) > 0
-      );
+      // Cargar playlists del usuario (si está autenticado) y playlists públicas
+      const [userPlaylists, publicPlaylists] = await Promise.all([
+        // Playlists privadas del usuario actual
+        userId
+          ? playlistsService.getAllPlaylists({ userId, isPublic: false })
+          : Promise.resolve([]),
+        // Playlists públicas (máximo 14)
+        playlistsService.getAllPlaylists({ isPublic: true })
+      ]);
 
       console.log('User playlists:', userPlaylists.length);
       console.log('Public playlists:', publicPlaylists.length);
 
+      // Filtrar playlists públicas con canciones y género
+      const filteredPublicPlaylists = publicPlaylists.filter(p =>
+        p.genre && (p.songCount || 0) > 0
+      );
+
       // Mostrar: primero las de usuario, luego las 14 públicas
       const finalPlaylists = [
         ...userPlaylists,
-        ...publicPlaylists.slice(0, 14)
+        ...filteredPublicPlaylists.slice(0, 14)
       ];
 
       setPlaylists(finalPlaylists);
@@ -148,13 +158,14 @@ export function Favorites() {
         showToast('¡Playlist actualizada exitosamente!', 'success');
       } else {
         // Modo crear - Validar límite de 15 playlists
-        const allPlaylists = await playlistsService.getAllPlaylists();
-        const userPlaylistsCount = allPlaylists.filter(p => !p.genre && !p.isPublic).length;
+        if (userId) {
+          const userPlaylists = await playlistsService.getAllPlaylists({ userId, isPublic: false });
 
-        if (userPlaylistsCount >= 15) {
-          showToast('Máximo 15 playlists. Elimina una para crear otra.', 'error');
-          setIsCreatingPlaylist(false);
-          return;
+          if (userPlaylists.length >= 15) {
+            showToast('Máximo 15 playlists. Elimina una para crear otra.', 'error');
+            setIsCreatingPlaylist(false);
+            return;
+          }
         }
 
         showToast('Creando playlist...', 'loading');
