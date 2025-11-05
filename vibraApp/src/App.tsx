@@ -4,7 +4,7 @@ import { MusicPlayer }  from './components/MusicPlayer'
 import { Sidebar } from './components/Sidebar'
 import { Waves } from './components/Waves'
 import { UserProvider } from './context/currentUserContext'
-import { MusicProvider } from './context/MusicContext';
+import  MusicProvider from './context/MusicProvider';
 
 function App() {
   return (

@@ -246,13 +246,38 @@
 }
 
 .song-texts {
-  max-width: 100%;
+  width: 100%;
   white-space: nowrap; /* evita salto de línea */
   overflow: hidden;    /* oculta el texto sobrante */
+  text-align: left;
   text-overflow: ellipsis; /* agrega ... si el texto no cabe */
   margin: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: .1rem;
+}
+.song-texts-div{
+  max-width: 80%;
 }
 
+.deleteButton {
+  padding: 4px 6px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: rgba(239, 68, 68, 0.7);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.deleteButton:hover {
+  color: rgba(239, 68, 68, 1);
+  background: rgba(239, 68, 68, 0.1);
+  transform: scale(1.1);
+}
 .squareCover {
   width: 100%;
   height: 150px;
