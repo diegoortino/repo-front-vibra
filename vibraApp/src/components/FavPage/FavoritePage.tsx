@@ -20,7 +20,7 @@ export function Favorites() {
 
   // Context para obtener el usuario actual
   const userContext = useContext(UserContext);
-  const userId = userContext?.user?.userId;
+  const userId = userContext?.user?.id;
 
   // Estado para playlists
   const [playlists, setPlaylists] = useState<Playlist[]>([]);

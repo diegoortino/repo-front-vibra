@@ -23,7 +23,7 @@ export function Sidebar() {
   );
 
   const userItem = {
-    to: user?.userId ? `/user/${user.userId}` : "/a",
+    to: user?.id ? `/user/${user.id}` : "/a",
     label: "User",
     icon: <Icons.User />,
   };

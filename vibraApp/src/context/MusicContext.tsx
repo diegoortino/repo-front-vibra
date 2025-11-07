@@ -230,14 +230,14 @@ export const MusicProvider = ({
   const playSong = useCallback(
     async (song: Song, songsLista?: Song[]) => {
       actualizarPlaylistConCancion(song, songsLista, true);
-       if (!user?.userId) return;
+       if (!user?.id) return;
 
       try {
         await fetch("http://localhost:3000/user-history", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            user: { id: user.userId },
+            user: { id: user.id },
             songId: song.id ?? undefined,   // solo si existe en DB
             youtubeId: song.youtubeId       // siempre presente
           }),
