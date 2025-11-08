@@ -9,7 +9,7 @@ import { useState, useCallback } from 'react';
 import { musicService } from '../services';
 import { getErrorMessage } from '../utils/errorHandler';
 import { normalizeToSong } from '../utils/utilsMusic';
-import type { Song, YouTubeSearchResult, SmartSearchResponse } from '../types';
+import type { Song } from '../types';
 
 /**
  * Estado del hook useMusic
@@ -174,18 +174,21 @@ export function useMusic() {
   /**
    * Búsqueda inteligente (BD + YouTube)
    */
-  const searchSmart = useCallback(async (query: string) => {
+  const searchSmart = useCallback(async (query: string, maxResults: number = 20) => {
     setState((prev) => ({ ...prev, loading: true, error: null }));
 
     try {
-      const results = await musicService.searchSmart(query);
+      const results = await musicService.searchSmart(query, maxResults);
+      const normalizedSongs = normalizeToSong(results);
+
       setState({
-        songs: normalizeToSong(results),
+        songs: normalizedSongs,
         loading: false,
         error: null,
         totalCount: results.total,
       });
-      return results;
+
+      return normalizedSongs;
     } catch (err) {
       const errorMessage = getErrorMessage(err);
       setState((prev) => ({

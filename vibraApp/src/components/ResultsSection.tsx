@@ -21,46 +21,30 @@ import './FavPage/Favorites.css';
 
 const ResultsSection = () => {
     const {toReproduce, dataFromSearch} = useSearchContext();
-    const { currentSong } = useMusicContext();
+    const { currentSong, currentPlaylistId } = useMusicContext();
     const vSt: string[] = ["init", "result", "results", "notFound"];
     const [state, setState] = useState(vSt[0]);
 
     useEffect(() => {
-        console.log("state: " + state);
         if (Array.isArray(dataFromSearch)) {
-          console.log("Array");
-          if (dataFromSearch.length === 0 || dataFromSearch[0].id === "") {
-            /*not found something */ 
+          if (dataFromSearch.length === 0 || dataFromSearch[0]?.id === "") {
             setState(vSt[3]);
           } else if (dataFromSearch.length === 1) {
-            /*at least some one */
             setState(vSt[1]);
           } else {
             setState(vSt[2]);
           }
-        }else if (dataFromSearch instanceof Object && dataFromSearch.hasOwnProperty("id") && dataFromSearch.id!=""){//object
-            /*only one*/
-           console.log("Object");
-           setState(vSt[1]);  
+        }else if (dataFromSearch instanceof Object && dataFromSearch.hasOwnProperty("id") && dataFromSearch.id!=""){
+           setState(vSt[1]);
         } else  {
            setState(vSt[3]);
         }
-      }, [dataFromSearch]);//on mount and change
+      }, [dataFromSearch]);
 
-    
+
     const handleClickPlayTrack = (data:ReproduceProps) => {
-      //console.log(event.target.parentElement.parentElement);
       if (data){
         toReproduce(data);
-      }
-    };
-
-    const handleClickPlayTrack_bk = (event:any) => {
-      event.preventDefault();
-      //console.log(event.target.parentElement.parentElement);
-      if (event.target.parentElement.parentElement.hasAttribute("data-track-id")){
-        let obj:string = event.target.parentElement.parentElement.getAttribute("data-track-id");// OBJECT
-        toReproduce(JSON.parse(obj));
       }
     };
 
@@ -72,7 +56,7 @@ const ResultsSection = () => {
             const data: ResultProps|null = Array.isArray(dataFromSearch) ? dataFromSearch[0] : dataFromSearch;
             if (data===null) 
               return <></>;
-            const isPlayingSingle = currentSong?.id === data.id;
+            const isPlayingSingle = currentSong?.id === data.id && currentPlaylistId === "search-results";
             return (
               <div className="suggestionsGrid">
                 <div
@@ -115,7 +99,7 @@ const ResultsSection = () => {
               <div className="suggestionsGrid">
                 {
                 dataFromSearch.map((datum: ResultProps) => {
-                    const isPlaying = currentSong?.id === datum.id;
+                    const isPlaying = currentSong?.id === datum.id && currentPlaylistId === "search-results";
                     return (
                     <div
                       key={datum.id}

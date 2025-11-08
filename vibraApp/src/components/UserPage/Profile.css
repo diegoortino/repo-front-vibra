@@ -3,7 +3,7 @@
   width: 90%;
   max-width: 1400px;
   margin-left: 60px;
-  padding: 40px 20px 100px;
+  padding: 20px 20px 100px;
   color: white;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 }
@@ -12,9 +12,9 @@
 .profileHeader {
   display: flex;
   align-items: center;
-  gap: 40px;
-  margin-bottom: 40px;
-  padding-bottom: 30px;
+  gap: 32px;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -66,9 +66,9 @@
 }
 
 .username {
-  font-size: 2.5rem;
+  font-size: 1.8rem;
   font-weight: 700;
-  margin: 0 0 20px 0;
+  margin: 0 0 12px 0;
   color: white;
   text-align: start;
   letter-spacing: -0.5px;
@@ -76,7 +76,7 @@
 
 .followStats {
   display: flex;
-  gap: 48px;
+  gap: 32px;
 }
 
 .stat {
@@ -90,14 +90,14 @@
 }
 
 .statLabel {
-  font-size: 0.95rem;
+  font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.6);
-  margin: 0 0 6px 0;
+  margin: 0 0 4px 0;
   font-weight: 500;
 }
 
 .statNumber {
-  font-size: 1.8rem;
+  font-size: 1.3rem;
   font-weight: 700;
   margin: 0;
   color: white;
@@ -106,24 +106,23 @@
 /* Botones de acción */
 .profileActions {
   display: flex;
-  gap: 12px;
-  margin-bottom: 50px;
+  gap: 8px;
+  margin: 10px 0 16px 0;
 }
 
 .actionBtn {
-  padding: 14px 28px;
+  padding: 5px 12px;
   border: none;
-  border-radius: 8px;
+  border-radius: 5px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 0.95rem;
+  font-size: 0.75rem;
 }
 
 .editBtn, .configBtn {
   background: #7c3aed;
   color: white;
-  flex: 1;
 }
 
 .editBtn:hover, .configBtn:hover {
@@ -138,13 +137,13 @@
 .shareBtn {
   background: rgba(124, 58, 237, 0.2);
   color: white;
-  width: 52px;
-  height: 52px;
-  border-radius: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 5px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1rem;
+  font-size: 0.7rem;
   padding: 0;
   border: 1px solid rgba(124, 58, 237, 0.3);
 }
@@ -156,17 +155,17 @@
 
 /* Secciones de contenido */
 .contentSections {
-  margin-bottom: 40px;
+  margin-bottom: 30px;
 }
 
 .section {
-  margin-bottom: 50px;
+  margin-bottom: 30px;
 }
 
 .sectionTitle {
-  font-size: 1.5rem;
+  font-size: 1.2rem;
   font-weight: 700;
-  margin: 0 0 24px 0;
+  margin: 0 0 16px 0;
   color: white;
   text-align: start;
   letter-spacing: -0.3px;

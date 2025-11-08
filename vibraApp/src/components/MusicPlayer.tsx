@@ -59,9 +59,11 @@ export function MusicPlayer() {
   }), []);
   const backendRef = useRef<Backend>(null);
   const listaRef = useRef<HTMLDivElement | null>(null);
+  const activeSongRef = useRef<HTMLButtonElement | null>(null);
   const [overrideBackend, setOverrideBackend] = useState<Backend>(null);
   const [progress, setProgress] = useState({ t: 0, d: 0, pct: 0 });
   const [volume, setVolume] = useState(1);
+  const [volumeBeforeMute, setVolumeBeforeMute] = useState(1);
   const [mostrarVisualizador, setMostrarVisualizador] = useState(false);
   const [indiceImagen, setIndiceImagen] = useState(0);
   const [mostrarLista, setMostrarLista] = useState(false);
@@ -271,20 +273,33 @@ export function MusicPlayer() {
     return () => document.removeEventListener('mousedown', onDocClick);
   }, [mostrarLista]);
 
+  // Scroll automático a la canción activa cuando se abre el dropdown
+  useEffect(() => {
+    if (mostrarLista && activeSongRef.current) {
+      activeSongRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+    }
+  }, [mostrarLista]);
+
   const onEnded = useCallback(() => {
     if (!playlist?.length) { setReproduciendo(false); return; }
-    const next = Math.min(indiceActual + 1, playlist.length - 1);
+    // Si es la última canción, volver a la primera (loop)
+    const next = indiceActual + 1 >= playlist.length ? 0 : indiceActual + 1;
     setIndiceActual(next);
     setReproduciendo(true);
   }, [indiceActual, playlist, setIndiceActual, setReproduciendo]);
 
   const onPrev = () => {
-    const prev = Math.max(0, indiceActual - 1);
+    // Si estoy en la primera canción, ir a la última (circular)
+    const prev = indiceActual - 1 < 0 ? playlist.length - 1 : indiceActual - 1;
     setIndiceActual(prev);
     setReproduciendo(true);
   };
   const onNext = () => {
-    const next = Math.min(playlist.length - 1, indiceActual + 1);
+    // Si estoy en la última canción, ir a la primera (circular)
+    const next = indiceActual + 1 >= playlist.length ? 0 : indiceActual + 1;
     setIndiceActual(next);
     setReproduciendo(true);
   };
@@ -311,6 +326,29 @@ export function MusicPlayer() {
       audioRef.current.volume = v;
     } else if (b === "youtube" && ytPlayerRef.current) {
       ytPlayerRef.current.setVolume?.(Math.round(v * 100));
+    }
+  };
+
+  const onToggleMute = () => {
+    const b = backendRef.current;
+    if (volume > 0) {
+      // Silenciar: guardar volumen actual y setear a 0
+      setVolumeBeforeMute(volume);
+      setVolume(0);
+      if (b === "cloudinary" && audioRef.current) {
+        audioRef.current.volume = 0;
+      } else if (b === "youtube" && ytPlayerRef.current) {
+        ytPlayerRef.current.setVolume?.(0);
+      }
+    } else {
+      // Reactivar: restaurar volumen anterior
+      const restoreVolume = volumeBeforeMute > 0 ? volumeBeforeMute : 1;
+      setVolume(restoreVolume);
+      if (b === "cloudinary" && audioRef.current) {
+        audioRef.current.volume = restoreVolume;
+      } else if (b === "youtube" && ytPlayerRef.current) {
+        ytPlayerRef.current.setVolume?.(Math.round(restoreVolume * 100));
+      }
     }
   };
 
@@ -410,9 +448,9 @@ export function MusicPlayer() {
             <button
               type="button"
               className="Reproductor__VolumenBtn"
-              onClick={() => {/* opcional: toggle mute con memoria */}}
-              aria-label="Silencio/sonido"
-              title="Silencio/sonido"
+              onClick={onToggleMute}
+              aria-label={volume > 0 ? "Silenciar" : "Activar sonido"}
+              title={volume > 0 ? "Silenciar" : "Activar sonido"}
             >
               <span aria-hidden="true">{volumeIcon}</span>
             </button>
@@ -453,6 +491,7 @@ export function MusicPlayer() {
                           return (
                             <li key={id} role="none">
                               <button
+                                ref={activo ? activeSongRef : null}
                                 type="button"
                                 className={`Reproductor__ListaCancion ${activo ? "is-active" : ""}`}
                                 onClick={() => { setIndiceActual(index); setReproduciendo(true); setMostrarLista(false); }}

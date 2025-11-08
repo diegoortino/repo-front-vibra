@@ -9,8 +9,8 @@ export function Sidebar() {
   if (!context) throw new Error("UserContext must be used inside a UserProvider");
 
   const { user } = context;
-  if (!user) return null;
 
+  // ✅ Hooks SIEMPRE primero, antes de cualquier early return
   const [collapsed, setCollapsed] = useState(true);
 
   const itemsTop = useMemo(
@@ -21,6 +21,9 @@ export function Sidebar() {
     ],
     []
   );
+
+  // Early return DESPUÉS de todos los hooks
+  if (!user) return null;
 
   const userItem = {
     to: user?.id ? `/user/${user.id}` : "/a",

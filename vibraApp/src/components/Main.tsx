@@ -2,7 +2,7 @@
   Main.tsx - Combina búsqueda de canciones + routing de páginas
  */
 
-import { useCallback,useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Route, Routes } from "react-router-dom";
 
 /* Components - Páginas existentes */
@@ -16,41 +16,59 @@ import ResultsSection from "./ResultsSection";
 import DiscoverMusic from "./DiscoverMusic";
 
 /* types */
-import type {SearchProps} from "../types/searchProps";
-import type {ResultProps} from "../types/resultProps";
-import type {ReproduceProps} from "../types/reproduceProps";
+import type { ResultProps } from "../types/resultProps";
 
 /* hooks */
+import { useSearchHandlers } from "../hooks";
 import SearchContext, { type SearchContextValue } from "../context/searchContext";
-/* Utils */
-import {UtoSearch,UtoReproduce,UtoResoult} from "../utils/utilsSearchContext"
+
 /* styles */
 import './Main.css'
 
+const SEARCH_RESULTS_KEY = 'vibra_search_results';
+
 const Main = () => {
+  // Inicializar con datos de sessionStorage si existen
+  const [dataFromSearch, setDataFromSearch] = useState<ResultProps[]>(() => {
+    try {
+      const stored = sessionStorage.getItem(SEARCH_RESULTS_KEY);
+      return stored ? JSON.parse(stored) : [];
+    } catch (error) {
+      console.error('Error al cargar resultados de búsqueda:', error);
+      return [];
+    }
+  });
 
-  const [dataFromSearch, setDataFromSearch] = useState<ResultProps[]>([]);
+  // Persistir resultados en sessionStorage cuando cambien
+  useEffect(() => {
+    try {
+      if (dataFromSearch.length > 0) {
+        sessionStorage.setItem(SEARCH_RESULTS_KEY, JSON.stringify(dataFromSearch));
+      } else {
+        sessionStorage.removeItem(SEARCH_RESULTS_KEY);
+      }
+    } catch (error) {
+      console.error('Error al guardar resultados de búsqueda:', error);
+    }
+  }, [dataFromSearch]);
 
-  const toSearch = useCallback(async(key: SearchProps)=>{UtoSearch(key,setDataFromSearch)},[UtoSearch,setDataFromSearch]);
+  // Usar el custom hook para manejar búsqueda y reproducción
+  const {
+    handleSearch,
+    handleReproduce
+  } = useSearchHandlers(dataFromSearch, setDataFromSearch);
 
-  const toResoult = useCallback((key: ResultProps | ResultProps []) =>{UtoResoult(key,setDataFromSearch)},[UtoResoult,setDataFromSearch]);
-
-  const toReproduce =useCallback((key: ReproduceProps) => {UtoReproduce(key);},[UtoReproduce]);
-
-
+  // Crear el valor del contexto con los handlers
   const value = useMemo<SearchContextValue>(
     () => ({
-      toSearch,
-      toReproduce,
-      toResoult,
+      toSearch: handleSearch,
+      toReproduce: handleReproduce,
       dataFromSearch
     }),
     [
-      toSearch,
-      toReproduce,
-      toResoult,
+      handleSearch,
+      handleReproduce,
       dataFromSearch,
-      
     ]
   );
 
@@ -60,7 +78,7 @@ const Main = () => {
         {/* Ruta principal: Home con búsqueda */}
         <Route path="/" element={
           <main className="main-content">
-            
+
             <SearchContext.Provider value={value}>
               <SearchSection/>
               <ResultsSection/>

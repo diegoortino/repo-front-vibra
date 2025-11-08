@@ -43,7 +43,7 @@ export function DiscoverMusic() {
 
   // Función para reproducir canción aleatoria
   const handlePlayRandomSong = (song: Song) => {
-    setCurrentPlaylistId(null);
+    setCurrentPlaylistId("discover-music");
     playSong(song, randomSongs);
   };
 
@@ -54,9 +54,13 @@ export function DiscoverMusic() {
 
       setRandomSongs(songs);
 
-      if (userRequestedNewSongs.current) {
+      // Solo cargar la primera canción si el usuario pidió nuevas canciones Y no hay nada reproduciéndose
+      if (userRequestedNewSongs.current && !currentSong) {
         const firstSong = songs[0];
         loadSong(firstSong, songs);
+        userRequestedNewSongs.current = false;
+      } else if (userRequestedNewSongs.current) {
+        // Si hay algo reproduciéndose, solo resetear el flag sin interrumpir
         userRequestedNewSongs.current = false;
       }
 
@@ -64,7 +68,7 @@ export function DiscoverMusic() {
         isUpdatingRef.current = false;
       }, 100);
     }
-  }, [songs, randomSongs.length, setRandomSongs, loadSong]);
+  }, [songs, randomSongs.length, setRandomSongs, loadSong, currentSong]);
 
   if (error) {
     return (
@@ -95,7 +99,7 @@ export function DiscoverMusic() {
 
         <div className="suggestionsGrid">
           {(randomSongs as Song[]).map((song) => {
-            const isPlaying = currentSong?.id === song.id && currentPlaylistId === null;
+            const isPlaying = currentSong?.id === song.id && currentPlaylistId === "discover-music";
 
             return (
               <div

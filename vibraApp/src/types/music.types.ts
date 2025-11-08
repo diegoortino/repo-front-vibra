@@ -26,15 +26,15 @@ export interface Song {
 /**
  * Interfaz para resultados de búsqueda de YouTube
  * Se usa cuando buscas canciones en YouTube sin guardarlas en BD
+ * IMPORTANTE: El backend extrae automáticamente el artista del título
  */
 export interface YouTubeSearchResult {
   id: string;                    // ID del video de YouTube
   title: string;                 // Título del video
-  channelTitle: string;          // Nombre del canal de YouTube
-  thumbnailUrl: string;          // URL de la miniatura
-  duration?: string;             // Duración en formato ISO 8601 (PT4M33S)
-  description?: string;          // Descripción del video (opcional)
-  publishedAt?: string;          // Fecha de publicación
+  artist: string;                // Artista (extraído del título por el backend)
+  duration: number;              // Duración en segundos
+  publishedAt: string;           // Fecha de publicación
+  viewCount?: number;            // Cantidad de vistas (opcional)
 }
 
 /**

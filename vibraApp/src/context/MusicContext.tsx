@@ -61,12 +61,17 @@ const normalizarTrack = (track: Track, index: number): Song => ({
   updatedAt: track.updatedAt,
 });
 
-const normalizarCancion = (song: Song): Song => ({
-  ...song,
-  id: song.id ?? song.youtubeId,
-  artist: song.artist ?? "Artista desconocido",
-  duration: song.duration ?? 0,
-});
+const normalizarCancion = (song: Song): Song => {
+  if (!song) {
+    throw new Error('Cannot normalize null/undefined song');
+  }
+  return {
+    ...song,
+    id: song.id ?? song.youtubeId,
+    artist: song.artist ?? "Artista desconocido",
+    duration: song.duration ?? 0,
+  };
+};
 
 const coincidenCanciones = (a: Song, b: Song) => {
   if (a.id && b.id) {

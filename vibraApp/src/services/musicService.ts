@@ -127,12 +127,13 @@ export const musicService = {
    * Búsqueda inteligente (primero BD, luego YouTube)
    *
    * @param query - Término de búsqueda
+   * @param maxResults - Cantidad máxima de resultados (default: 20)
    * @returns Promise con resultados combinados de BD y YouTube
    */
-  searchSmart: async (query: string): Promise<SmartSearchResponse> => {
+  searchSmart: async (query: string, maxResults: number = 20): Promise<SmartSearchResponse> => {
     const response = await apiClient.get<SmartSearchResponse>(
       '/music/search-smart',
-      { params: { query } }
+      { params: { query, maxResults } }
     );
     return response.data;
   },
