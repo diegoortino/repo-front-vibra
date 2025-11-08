@@ -8,6 +8,7 @@
 import { useState, useCallback } from 'react';
 import { musicService } from '../services';
 import { getErrorMessage } from '../utils/errorHandler';
+import { normalizeToSong } from '../utils/utilsMusic';
 import type { Song, YouTubeSearchResult, SmartSearchResponse } from '../types';
 
 /**
@@ -179,7 +180,7 @@ export function useMusic() {
     try {
       const results = await musicService.searchSmart(query);
       setState({
-        songs: results.fromDatabase,
+        songs: normalizeToSong(results),
         loading: false,
         error: null,
         totalCount: results.total,

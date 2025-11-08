@@ -3,21 +3,22 @@
  */
 
 /* Dependencies  */
-import { useContext, useEffect, useState } from "react";
+import {useEffect, useState } from "react";
 
 /* hooks */
-import SearchContext from "../hooks/searchContext";
+import {useSearchContext} from "../hooks/useSearchContext";
 
 /* styles */
 import './search-section.css';
 
 const SearchSection = () => {
-  const { dataToSearch } = useContext(SearchContext);
   const [valueCurrent, setValueCurrent] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  
+  const {toSearch} = useSearchContext();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -45,7 +46,7 @@ const SearchSection = () => {
     }, 300);
 
     if(event.target["search"].value.length) {
-      dataToSearch({search:event.target["search"].value});
+      toSearch({search:event.target["search"].value});
     }
     setValueCurrent(event.target["search"].value);
   };
@@ -84,7 +85,7 @@ const SearchSection = () => {
     setValueCurrent(suggestion);
     setSuggestions([]);
     setShowSuggestions(false);
-    dataToSearch({search: suggestion});
+    toSearch({search: suggestion});
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
