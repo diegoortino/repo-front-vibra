@@ -10,6 +10,9 @@
  *   import { Song, Playlist } from '../types';
  */
 
+// Tipos de imágenes
+export type { Image } from './images.types';
+
 // Tipos de música
 export type {
   Song,

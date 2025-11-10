@@ -10,6 +10,7 @@ import {
 } from "react";
 import type { Song } from "../types";
 import { UserContext } from "./currentUserContext";
+import { useImages } from "../hooks/useImages";
 
 export type Track = Partial<Song> & {
   youtubeId: string;
@@ -32,6 +33,10 @@ export type MusicContextValue = {
   setRandomSongs: (songs: Song[]) => void;
   currentPlaylistId: string | null;
   setCurrentPlaylistId: (id: string | null) => void;
+
+  // 🔎 Estado de imágenes (hook useImages)
+  imagesLoading: boolean;
+  imagesError: string | null;
 };
 
 const MusicContext = createContext<MusicContextValue | undefined>(undefined);
@@ -63,7 +68,7 @@ const normalizarTrack = (track: Track, index: number): Song => ({
 
 const normalizarCancion = (song: Song): Song => {
   if (!song) {
-    throw new Error('Cannot normalize null/undefined song');
+    throw new Error("Cannot normalize null/undefined song");
   }
   return {
     ...song,
@@ -83,92 +88,137 @@ const coincidenCanciones = (a: Song, b: Song) => {
 const generarMiniatura = (song: Song) =>
   song.cloudinaryUrl ?? `https://img.youtube.com/vi/${song.youtubeId}/hqdefault.jpg`;
 
-export const MusicProvider = ({
-  children,
-  songs = [],
-  images = [],
-  playlistName,
-  startIndex = 0,
-}: MusicProviderProps) => {
-  const pistasIniciales = useMemo(
-    () => songs.map((track, index) => normalizarTrack(track, index)),
-    [songs]
-  );
 
-  const [playlist, setPlaylistState] = useState<Song[]>(pistasIniciales);
-  const playlistRef = useRef<Song[]>(pistasIniciales);
+  export const MusicProvider = ({
+    children,
+    songs = [],
+    images = [],
+    playlistName,
+    startIndex = 0,
+  }: MusicProviderProps) => {
+    const pistasIniciales = useMemo(
+      () => songs.map((track, index) => normalizarTrack(track, index)),
+      [songs]
+    );
 
-  const normalizarIndice = useCallback(
-    (indice: number, base: Song[]) => {
-      if (base.length === 0) return 0;
-      if (indice < 0) return 0;
-      if (indice >= base.length) return base.length - 1;
-      return indice;
-    },
-    []
-  );
+    const [playlist, setPlaylistState] = useState<Song[]>(pistasIniciales);
+    const playlistRef = useRef<Song[]>(pistasIniciales);
 
-  const [indiceActual, setIndiceActualState] = useState<number>(() =>
-    normalizarIndice(startIndex, pistasIniciales)
-  );
-  const [reproduciendoInterno, setReproduciendoInterno] = useState(false);
-  const [nombrePlaylist, setNombrePlaylist] = useState<string | undefined>(playlistName);
-  const [randomSongs, setRandomSongsState] = useState<Song[]>([]);
-  const [currentPlaylistId, setCurrentPlaylistIdState] = useState<string | null>(null);
+    const normalizarIndice = useCallback(
+      (indice: number, base: Song[]) => {
+        if (base.length === 0) return 0;
+        if (indice < 0) return 0;
+        if (indice >= base.length) return base.length - 1;
+        return indice;
+      },
+      []
+    );
 
-  const setPlaylist = useCallback(
-    (updater: Song[] | ((prev: Song[]) => Song[])) => {
-      setPlaylistState((prev) => {
-        const resultado =
-          typeof updater === "function" ? (updater as (prev: Song[]) => Song[])(prev) : updater;
-        playlistRef.current = resultado;
-        return resultado;
-      });
-    },
-    []
-  );
-  const userContext = useContext(UserContext)!;
+    const [indiceActual, setIndiceActualState] = useState<number>(() =>
+      normalizarIndice(startIndex, pistasIniciales)
+    );
+    const [reproduciendoInterno, setReproduciendoInterno] = useState(false);
+    const [nombrePlaylist, setNombrePlaylist] = useState<string | undefined>(
+      playlistName
+    );
+    const [randomSongs, setRandomSongsState] = useState<Song[]>([]);
+    const [currentPlaylistId, setCurrentPlaylistIdState] = useState<string | null>(
+      null
+    );
 
-  if (!userContext) {
-    console.error("UserContext no está disponible");
-  }
+    const setPlaylist = useCallback(
+      (updater: Song[] | ((prev: Song[]) => Song[])) => {
+        setPlaylistState((prev) => {
+          const resultado =
+            typeof updater === "function"
+              ? (updater as (prev: Song[]) => Song[])(prev)
+              : updater;
+          playlistRef.current = resultado;
+          return resultado;
+        });
+      },
+      []
+    );
 
-  const { user } = userContext; // ✅ TypeScript ahora sabe que userContext no es undefined
-  useEffect(() => {
-    // Si el provider recibe nuevas pistas iniciales y todavía no hay playlist activa,
-    // usamos ese valor por defecto.
-    if (playlistRef.current.length === 0 && pistasIniciales.length > 0) {
-      playlistRef.current = pistasIniciales;
-      setPlaylistState(pistasIniciales);
-      setIndiceActualState(normalizarIndice(startIndex, pistasIniciales));
-      setNombrePlaylist((prev) => prev ?? playlistName);
+    const userContext = useContext(UserContext)!;
+    if (!userContext) {
+      console.error("UserContext no está disponible");
     }
-  }, [normalizarIndice, pistasIniciales, playlistName, startIndex]);
+    const { user } = userContext;
 
+    // 👇 hook de imágenes
+    const {
+      images: fetchedImages,
+      loading: imagesLoading,
+      error: imagesError,
+      fetchImages,
+    } = useImages();
+
+    useEffect(() => {
+      if (playlistRef.current.length === 0 && pistasIniciales.length > 0) {
+        playlistRef.current = pistasIniciales;
+        setPlaylistState(pistasIniciales);
+        setIndiceActualState(normalizarIndice(startIndex, pistasIniciales));
+        setNombrePlaylist((prev) => prev ?? playlistName);
+      }
+    }, [normalizarIndice, pistasIniciales, playlistName, startIndex]);
+
+    useEffect(() => {
+      if (indiceActual >= playlist.length) {
+        setIndiceActualState((prev) =>
+          prev === 0 ? 0 : normalizarIndice(prev, playlist)
+        );
+      }
+    }, [indiceActual, normalizarIndice, playlist]);
+
+    const idsCanciones = useMemo(
+      () => playlist.map((song) => song.youtubeId),
+      [playlist]
+    );
+
+    const currentSong = useMemo(
+      () => playlist[indiceActual] ?? null,
+      [playlist, indiceActual]
+    );
+
+    // 🔥 cuando cambia la canción actual, pedimos imágenes
   useEffect(() => {
-    if (indiceActual >= playlist.length) {
-      setIndiceActualState((prev) =>
-        prev === 0 ? 0 : normalizarIndice(prev, playlist)
+    if (currentSong?.genre) {
+      const rawGenre = currentSong.genre;
+
+      // Normalizar: primera letra mayúscula, resto minúscula
+      const normalizedGenre =
+        rawGenre.charAt(0).toUpperCase() + rawGenre.slice(1).toLowerCase();
+
+      console.log(
+        "[MusicContext] pidiendo imágenes para genre:",
+        rawGenre,
+        "->",
+        normalizedGenre,
+        "duration:",
+        currentSong.duration
       );
+
+      fetchImages(normalizedGenre, currentSong.duration ?? 0);
+    } else {
+      console.log("[MusicContext] currentSong sin genre:", currentSong);
     }
-  }, [indiceActual, normalizarIndice, playlist]);
+  }, [currentSong, fetchImages]);
 
-  const idsCanciones = useMemo(
-    () => playlist.map((song) => song.youtubeId),
-    [playlist]
-  );
+    const urlsImagenes = useMemo(() => {
+      // 1) primero, las del backend (hook)
+      if (fetchedImages.length > 0) {
+        return fetchedImages.map((img) => img.thumbnailUrl ?? img.imageUrl);
+      }
 
-  const urlsImagenes = useMemo(() => {
-    if (playlist.length > 0) {
-      return playlist.map(generarMiniatura);
-    }
-    return images;
-  }, [playlist, images]);
+      // 2) luego, miniaturas generadas desde la playlist
+      if (playlist.length > 0) {
+        return playlist.map(generarMiniatura);
+      }
 
-  const currentSong = useMemo(
-    () => playlist[indiceActual] ?? null,
-    [playlist, indiceActual]
-  );
+      // 3) fallback: las que vengan por props
+      return images;
+    }, [fetchedImages, playlist, images]);
 
   const setIndiceActual = useCallback(
     (indice: number) => {
@@ -196,7 +246,9 @@ export const MusicProvider = ({
 
       if (songsLista && songsLista.length > 0) {
         const normalizados = songsLista.map(normalizarCancion);
-        let indice = normalizados.findIndex((item) => coincidenCanciones(item, objetivo));
+        let indice = normalizados.findIndex((item) =>
+          coincidenCanciones(item, objetivo)
+        );
         let listaFinal = normalizados;
         if (indice === -1) {
           listaFinal = [...normalizados, objetivo];
@@ -207,7 +259,9 @@ export const MusicProvider = ({
         setNombrePlaylist((prev) => prev ?? playlistName);
       } else {
         setPlaylist((prev) => {
-          let indice = prev.findIndex((item) => coincidenCanciones(item, objetivo));
+          let indice = prev.findIndex((item) =>
+            coincidenCanciones(item, objetivo)
+          );
           let listaFinal = prev;
           if (indice === -1) {
             listaFinal = [...prev, objetivo];
@@ -235,7 +289,7 @@ export const MusicProvider = ({
   const playSong = useCallback(
     async (song: Song, songsLista?: Song[]) => {
       actualizarPlaylistConCancion(song, songsLista, true);
-       if (!user?.id) return;
+      if (!user?.id) return;
 
       try {
         await fetch("http://localhost:3000/user-history", {
@@ -243,15 +297,15 @@ export const MusicProvider = ({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             user: { id: user.id },
-            songId: song.id ?? undefined,   // solo si existe en DB
-            youtubeId: song.youtubeId       // siempre presente
+            songId: song.id ?? undefined, // solo si existe en DB
+            youtubeId: song.youtubeId, // siempre presente
           }),
         });
-        } catch (err) {
-          console.error("Error al registrar canción en historial:", err);
-        }
+      } catch (err) {
+        console.error("Error al registrar canción en historial:", err);
+      }
     },
-    [actualizarPlaylistConCancion,user]
+    [actualizarPlaylistConCancion, user]
   );
 
   const setRandomSongs = useCallback((songs: Song[]) => {
@@ -279,6 +333,8 @@ export const MusicProvider = ({
       setRandomSongs,
       currentPlaylistId,
       setCurrentPlaylistId,
+      imagesLoading,
+      imagesError,
     }),
     [
       currentPlaylistId,
@@ -296,6 +352,8 @@ export const MusicProvider = ({
       urlsImagenes,
       setRandomSongs,
       setCurrentPlaylistId,
+      imagesLoading,
+      imagesError,
     ]
   );
 
