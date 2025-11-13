@@ -24,6 +24,7 @@ import SearchContext, { type SearchContextValue } from "../context/searchContext
 
 /* styles */
 import './Main.css'
+import SongHistory from "./SongHistory/SongHistory";
 
 const SEARCH_RESULTS_KEY = 'vibra_search_results';
 
@@ -90,6 +91,7 @@ const Main = () => {
 
         {/* Rutas existentes */}
         <Route path="/user/:userId" element={<Profile/>} />
+        <Route path="/user/:userId/song-history" element={<SongHistory/>} />
         <Route path="/favorites" element={<Favorites/>} />
         <Route path="/follows" element={<Follows/>} />
       </Routes>

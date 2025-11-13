@@ -104,7 +104,7 @@ export function FollowModal({isOpen, onClose, type, targetUserId, currentUserId,
                     ) : (
                         usersList.map((user, index) => (
                             <div key={user.id || index} className="user-item">
-                                <div className="user-info" onClick={() => window.location.href = `/profile/${user.id}`}>
+                                <div className="user-info" onClick={() => window.location.href = `/user/${user.id}`}>
                                     <div className="profile-avatar">
                                         {user.profileImage ? (
                                             <img src={user.profileImage} alt="foto perfil" />
