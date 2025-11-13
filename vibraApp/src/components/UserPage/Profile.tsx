@@ -12,6 +12,7 @@ import type { ToastType } from '../Toast/Toast';
 import { ConfigUserModal } from './configUserModal/configUserModal';
 import { FollowModal } from './followModal/FollowModal';
 import type { Song } from '../../types';
+import { NavLink } from 'react-router-dom';
 
 interface User {
   profileImage: string;
@@ -60,7 +61,7 @@ export function Profile() {
   // 🔁 Reutilizable: carga el historial
   const fetchHistory = async (userId: string) => {
     try {
-      const resHistory = await fetch(`http://localhost:3000/user-history/user/${userId}`);
+      const resHistory = await fetch(`http://localhost:3000/user-history/user/${userId}/limited`);
       if (!resHistory.ok) throw new Error('Error fetching user history');
       const historyData = await resHistory.json();
       const normalizedHistory = Array.isArray(historyData)
@@ -320,7 +321,10 @@ export function Profile() {
         ) : (
           <div>
             <div className="section">
-              <h3 className="sectionTitle">Historial</h3>
+              <div className='section-titles'>
+                <h3 className="sectionTitle">Historial</h3>
+                <NavLink to={`/user/${userId}/song-history`}> Ver más</NavLink>
+              </div>
               <div className="itemsGrid">
                 {userHistory.length === 0 ? (
                   <p className="empty-message">
