@@ -6,6 +6,7 @@ import { SongSelector } from './SongSelector';
 import { AlertModal } from '../AlertModal/AlertModal';
 import type { Song } from '../../types';
 import type { PlaylistWithSongs } from '../../services/playlistsService';
+// Removed formatArtist and formatTitle - now showing raw data from DB
 
 interface CreatePlaylistModalProps {
   isOpen: boolean;

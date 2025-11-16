@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faSearch } from '@fortawesome/free-solid-svg-icons';
 import './SongSelector.css';
 import type { Song } from '../../types';
+import { formatGenre } from '../../utils/utilsMusic';
 
 interface SongSelectorProps {
   selectedSongs: Song[];
@@ -204,7 +205,7 @@ export function SongSelector({
                   <span className="song-item-title">{song.title}</span>
                   <span className="song-item-artist">
                     {song.artist}
-                    {(song as any).genre && ` • ${(song as any).genre}`}
+                    {(song as any).genre && ` • ${formatGenre((song as any).genre)}`}
                   </span>
                 </div>
                 <button

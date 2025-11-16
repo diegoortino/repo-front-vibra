@@ -11,6 +11,7 @@ import { Toast } from '../Toast/Toast';
 import type { ToastType } from '../Toast/Toast';
 import { ConfigUserModal } from './configUserModal/configUserModal';
 import type { Song } from '../../types';
+// Removed formatArtist and formatTitle - now showing raw data from DB
 
 interface User {
   profileImage: string;

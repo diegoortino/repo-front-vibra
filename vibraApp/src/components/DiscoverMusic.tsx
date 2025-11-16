@@ -1,9 +1,10 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faHeart, faPlay, faShuffle } from '@fortawesome/free-solid-svg-icons';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useMusic } from '../hooks';
 import { useMusicContext } from '../context/MusicContext';
 import type { Song } from '../types';
+import { formatGenre } from '../utils/utilsMusic';
 import '../components/FavPage/Favorites.css';
 
 export function DiscoverMusic() {
@@ -125,7 +126,7 @@ export function DiscoverMusic() {
                   <p className="cardSubtitle">{song.artist}</p>
                   <div className="cardFooter">
                     <span className="cardStats">
-                      {song.genre || 'Sin género'} • {Math.floor(song.duration / 60)}:{String(song.duration % 60).padStart(2, '0')}
+                      {formatGenre(song.genre)} • {Math.floor(song.duration / 60)}:{String(song.duration % 60).padStart(2, '0')}
                     </span>
                     <button
                       className="likeButton"

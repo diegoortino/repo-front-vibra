@@ -68,8 +68,8 @@ export function MusicPlayer() {
   const [indiceImagen, setIndiceImagen] = useState(0);
   const [mostrarLista, setMostrarLista] = useState(false);
 
-  const titulo = currentSong?.title ?? "";
-  const artista = currentSong?.artist ?? "";
+  const titulo = currentSong?.title;
+  const artista = currentSong?.artist;
   const miniYT = currentSong?.youtubeId
     ? `https://img.youtube.com/vi/${currentSong.youtubeId}/hqdefault.jpg`
     : undefined;
@@ -357,7 +357,7 @@ export function MusicPlayer() {
     playlist?.map((s, index) => ({
       id: s.id || s.youtubeId || `track-${index}`,
       titulo: s.title || `Canción ${index + 1}`,
-      autor: s.artist || "",
+      autor: s.artist,
       index,
     })) ?? []
   ), [playlist]);
