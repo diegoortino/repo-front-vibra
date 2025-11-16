@@ -16,6 +16,9 @@ import type {ReproduceProps} from "../types/reproduceProps";
 import { useSearchContext } from "../hooks/useSearchContext";
 import { useMusicContext }  from "../context/MusicContext";
 
+/* utils */
+// Removed formatArtist and formatTitle - now showing raw data from DB
+
 /* styles */
 import './FavPage/Favorites.css';
 

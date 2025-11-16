@@ -57,8 +57,10 @@ export const playlistService = {
    * @returns Promise con array de canciones
    */
   getPlaylistSongs: async (id: string): Promise<Song[]> => {
-    const response = await apiClient.get<Song[]>(`/playlists/${id}/songs`);
-    return response.data;
+    const response = await apiClient.get<any[]>(`/playlists/${id}/songs`);
+    // El backend devuelve PlaylistSong[] con la canción anidada en el campo 'song'
+    // Extraer solo las canciones del array
+    return response.data.map((playlistSong: any) => playlistSong.song);
   },
 
   /**
@@ -207,7 +209,114 @@ export const playlistService = {
   },
 
   /**
-   * Duplicar una playlist
+   * POST /playlists/:id/songs/batch
+   * Agregar múltiples canciones a una playlist en una sola petición
+   *
+   * @param playlistId - UUID de la playlist
+   * @param songIds - Array de UUIDs de canciones
+   * @returns Promise con la playlist actualizada
+   */
+  addSongsBatch: async (
+    playlistId: string,
+    songIds: string[]
+  ): Promise<Playlist> => {
+    const response = await apiClient.post<Playlist>(
+      `/playlists/${playlistId}/songs/batch`,
+      {
+        songs: songIds.map(songId => ({ songId }))
+      }
+    );
+    return response.data;
+  },
+
+  /**
+   * PUT /playlists/:id/songs
+   * Reemplazar todas las canciones de una playlist
+   *
+   * @param playlistId - UUID de la playlist
+   * @param songIds - Array de UUIDs de canciones
+   * @returns Promise con la playlist actualizada
+   */
+  replaceSongs: async (
+    playlistId: string,
+    songIds: string[]
+  ): Promise<Playlist> => {
+    const response = await apiClient.put<Playlist>(
+      `/playlists/${playlistId}/songs`,
+      { songIds }
+    );
+    return response.data;
+  },
+
+  /**
+   * Crear playlist con canciones en una sola operación optimizada
+   *
+   * @param name - Nombre de la playlist
+   * @param songIds - Array de UUIDs de canciones
+   * @param userId - ID del usuario (opcional)
+   * @returns Promise con la playlist creada
+   */
+  createPlaylistWithSongs: async (
+    name: string,
+    songIds: string[],
+    userId?: string
+  ): Promise<Playlist> => {
+    // Paso 1: Crear la playlist vacía
+    const createData: CreatePlaylistDto = {
+      name,
+      isPublic: false
+    };
+
+    const url = userId ? `/playlists?userId=${userId}` : '/playlists';
+    const createResponse = await apiClient.post<Playlist>(url, createData);
+    const playlist = createResponse.data;
+
+    // Paso 2: Agregar todas las canciones en BATCH (optimizado)
+    if (songIds.length > 0) {
+      await playlistService.addSongsBatch(playlist.id, songIds);
+    }
+
+    // Paso 3: Obtener la playlist actualizada con las canciones
+    return playlistService.getPlaylistWithSongs(playlist.id);
+  },
+
+  /**
+   * Actualizar playlist con nuevo nombre y canciones
+   *
+   * @param id - UUID de la playlist
+   * @param name - Nuevo nombre
+   * @param songIds - Array de UUIDs de canciones
+   * @returns Promise con la playlist actualizada
+   */
+  updatePlaylistWithSongs: async (
+    id: string,
+    name: string,
+    songIds: string[]
+  ): Promise<Playlist> => {
+    // Paso 1: Actualizar el nombre
+    await playlistService.updatePlaylist(id, { name });
+
+    // Paso 2: Reemplazar todas las canciones en UNA SOLA petición
+    await playlistService.replaceSongs(id, songIds);
+
+    // Paso 3: Obtener la playlist actualizada
+    return playlistService.getPlaylistWithSongs(id);
+  },
+
+  /**
+   * PATCH /playlists/:id/regenerate
+   * Regenerar una playlist automática
+   *
+   * @param id - UUID de la playlist
+   * @returns Promise con la playlist regenerada
+   */
+  regeneratePlaylist: async (id: string): Promise<Playlist> => {
+    const response = await apiClient.patch<Playlist>(`/playlists/${id}/regenerate`);
+    return response.data;
+  },
+
+  /**
+   * Duplicar una playlist (optimizado con batch)
    * @param playlistId - UUID de la playlist a duplicar
    * @param newName - Nombre para la nueva playlist
    * @returns Promise con la nueva playlist creada
@@ -219,21 +328,9 @@ export const playlistService = {
     // Obtener playlist original con canciones
     const original = await playlistService.getPlaylistWithSongs(playlistId);
 
-    // Crear nueva playlist
-    const newPlaylist = await playlistService.createPlaylist({
-      name: newName,
-      description: `Copia de: ${original.name}`,
-      isPublic: false,
-    });
-
-    // Agregar todas las canciones
-    for (const song of original.songs) {
-      await playlistService.addSongToPlaylist(newPlaylist.id, {
-        songId: song.id,
-      });
-    }
-
-    return newPlaylist;
+    // Crear nueva playlist con canciones usando batch (optimizado)
+    const songIds = original.songs.map(song => song.id);
+    return playlistService.createPlaylistWithSongs(newName, songIds);
   },
 };
 

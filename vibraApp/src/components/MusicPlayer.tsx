@@ -68,8 +68,8 @@ export function MusicPlayer() {
   const [indiceImagen, setIndiceImagen] = useState(0);
   const [mostrarLista, setMostrarLista] = useState(false);
 
-  const titulo = currentSong?.title ?? "";
-  const artista = currentSong?.artist ?? "";
+  const titulo = currentSong?.title;
+  const artista = currentSong?.artist;
   const miniYT = currentSong?.youtubeId
     ? `https://img.youtube.com/vi/${currentSong.youtubeId}/hqdefault.jpg`
     : undefined;
@@ -353,19 +353,21 @@ export function MusicPlayer() {
   };
 
   // Lista visible (títulos desde el contexto directamente)
-  const itemsLista = useMemo(() => (
-    playlist?.map((s, index) => ({
+  const itemsLista = useMemo(() => {
+    const items = playlist?.map((s, index) => ({
       id: s.id || s.youtubeId || `track-${index}`,
       titulo: s.title || `Canción ${index + 1}`,
-      autor: s.artist || "",
+      autor: s.artist,
       index,
-    })) ?? []
-  ), [playlist]);
+    })) ?? [];
+    console.log('🎵 [MusicPlayer] itemsLista actualizado. Total canciones:', items.length);
+    return items;
+  }, [playlist]);
 
   const tiempoActual = formatTime(progress.t);
   const tiempoTotal = progress.d > 0 ? formatTime(progress.d) : "--:--";
 
-  if (!currentSong) return null;
+  const noHayCancion = !currentSong;
 
   return (
     <>
@@ -403,27 +405,27 @@ export function MusicPlayer() {
         <div className="Reproductor__LayoutDetallado">
           {/* IZQ: portada + info */}
           <nav className="Reproductor__ZonaIzquierda">
-            <div className="Reproductor__ContenedorMiniatura" onClick={() => setMostrarVisualizador(true)} title="Abrir visualizador de imágenes">
+            <div className="Reproductor__ContenedorMiniatura" onClick={() => !noHayCancion && setMostrarVisualizador(true)} title={noHayCancion ? "" : "Abrir visualizador de imágenes"} style={{ cursor: noHayCancion ? 'default' : 'pointer' }}>
               {miniYT && (
                 <img src={miniYT} alt={titulo ? `Portada: ${titulo}` : "Portada"} className="Reproductor__ImagenMiniatura" draggable={false} />
               )}
             </div>
             <div className="Reproductor__ContenedorInfoPista">
-              <div className="Reproductor__TituloPista">{titulo}</div>
-              <div className="Reproductor__AutorPista">{artista}</div>
+              <div className="Reproductor__TituloPista">{noHayCancion ? "Sin canción" : titulo}</div>
+              <div className="Reproductor__AutorPista">{noHayCancion ? "Selecciona una canción para reproducir" : artista}</div>
             </div>
           </nav>
 
           {/* CENTRO: controles + progreso */}
           <nav className="Reproductor__ZonaCentral">
             <div className="Reproductor__ContenedorControles">
-              <button className="Reproductor__BotonControl" onClick={onPrev} aria-label="Anterior">
+              <button className="Reproductor__BotonControl" onClick={onPrev} aria-label="Anterior" disabled={noHayCancion}>
                 <span aria-hidden="true"><Icons.Prev /></span>
               </button>
-              <button className="Reproductor__BotonControl" onClick={onTogglePlay} aria-label={reproduciendo ? "Pausar" : "Reproducir"}>
+              <button className="Reproductor__BotonControl" onClick={onTogglePlay} aria-label={reproduciendo ? "Pausar" : "Reproducir"} disabled={noHayCancion}>
                 <span aria-hidden="true">{reproduciendo ? <Icons.Pause /> : <Icons.Play />}</span>
               </button>
-              <button className="Reproductor__BotonControl" onClick={onNext} aria-label="Siguiente">
+              <button className="Reproductor__BotonControl" onClick={onNext} aria-label="Siguiente" disabled={noHayCancion}>
                 <span aria-hidden="true"><Icons.Next /></span>
               </button>
             </div>
@@ -438,6 +440,7 @@ export function MusicPlayer() {
                 onChange={onChangeProgress}
                 className="Reproductor__BarraProgreso"
                 aria-label="Barra de progreso"
+                disabled={noHayCancion}
               />
               <div className="Reproductor__Tiempo Reproductor__TiempoTotal">{tiempoTotal}</div>
             </div>
@@ -525,6 +528,7 @@ export function MusicPlayer() {
               onClick={() => setMostrarVisualizador(true)}
               title="Visualizador IA"
               aria-label="Visualizador IA"
+              disabled={noHayCancion}
             >
               <span aria-hidden="true"><Icons.Image /></span>
             </button>

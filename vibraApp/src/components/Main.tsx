@@ -9,6 +9,7 @@ import { Route, Routes } from "react-router-dom";
 import Profile from "./UserPage/Profile"
 import Favorites from "./FavPage/FavoritePage";
 import { Follows } from "./SubsPage/Follows";
+import { CreatePlaylistPage } from "./CreatePlaylistPage/CreatePlaylistPage";
 
 /* Components - Nueva funcionalidad de búsqueda */
 import SearchSection from "./SearchSection";
@@ -93,6 +94,7 @@ const Main = () => {
         <Route path="/user/:userId" element={<Profile/>} />
         <Route path="/user/:userId/song-history" element={<SongHistory/>} />
         <Route path="/favorites" element={<Favorites/>} />
+        <Route path="/favorites/create-playlist" element={<CreatePlaylistPage/>} />
         <Route path="/follows" element={<Follows/>} />
       </Routes>
     </div>

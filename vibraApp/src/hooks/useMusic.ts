@@ -70,6 +70,32 @@ export function useMusic() {
   }, []);
 
   /**
+   * Obtener canciones ALEATORIAS (para "Descubre Nueva Música")
+   */
+  const fetchRandomSongs = useCallback(async (limit = 25) => {
+    setState((prev) => ({ ...prev, loading: true, error: null }));
+
+    try {
+      const songs = await musicService.getRandomSongs(limit);
+      setState({
+        songs,
+        loading: false,
+        error: null,
+        totalCount: songs.length,
+      });
+      return songs;
+    } catch (err) {
+      const errorMessage = getErrorMessage(err);
+      setState((prev) => ({
+        ...prev,
+        loading: false,
+        error: errorMessage,
+      }));
+      throw err;
+    }
+  }, []);
+
+  /**
    * Obtener una canción por ID
    */
   const fetchSongById = useCallback(async (id: string) => {
@@ -311,6 +337,7 @@ export function useMusic() {
 
     // Funciones
     fetchSongs,
+    fetchRandomSongs,
     fetchSongById,
     fetchByGenre,
     fetchByArtist,

@@ -1,5 +1,3 @@
-import './CreatePlaylistModal.css';
-
 interface SearchInputProps {
   value: string;
   onChange: (value: string) => void;

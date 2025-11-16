@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faSearch } from '@fortawesome/free-solid-svg-icons';
+import axios from 'axios';
 import './SongSelector.css';
 import type { Song } from '../../types';
+import { formatGenre } from '../../utils/utilsMusic';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 interface SongSelectorProps {
   selectedSongs: Song[];
   onAddSong: (song: Song) => void;
-  onRemoveSong?: (songId: string) => void;
   maxSongs?: number;
   showSearchBox?: boolean;
   searchTerm?: string;
@@ -20,7 +23,6 @@ interface SongSelectorProps {
 export function SongSelector({
   selectedSongs,
   onAddSong,
-  onRemoveSong,
   maxSongs = 30,
   showSearchBox = true,
   searchTerm: externalSearchTerm,
@@ -36,54 +38,68 @@ export function SongSelector({
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [displayCount, setDisplayCount] = useState(20); // Mostrar 20 inicialmente
+  const [currentOffset, setCurrentOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const BATCH_SIZE = 100; // Cargar 100 canciones por lote
 
   // Usar searchTerm externo si se provee, sino usar el interno
   const searchTerm = externalSearchTerm !== undefined ? externalSearchTerm : internalSearchTerm;
 
-  // Cargar canciones desde el backend
+  // Cargar canciones desde el backend - cambia según si hay filtro de género o no
   useEffect(() => {
-    const fetchSongs = async () => {
+    const fetchInitialSongs = async () => {
       try {
         setLoading(true);
-        const response = await fetch('http://localhost:3000/music/songs?limit=5000');
-        const data = await response.json();
+        let response;
+
+        // Si hay filtro de género, usar el endpoint de género
+        if (genreFilter && genreFilter.length > 0) {
+          console.log('🎵 Filtrando por género:', genreFilter[0]);
+          const url = `${API_URL}/music/songs/genre/${encodeURIComponent(genreFilter[0])}?limit=1000`;
+          console.log('🌐 URL:', url);
+          // Cargar TODAS las canciones del género seleccionado (sin paginación)
+          response = await axios.get(url);
+          console.log('✅ Respuesta género:', response.data.length, 'canciones');
+        } else {
+          console.log('📋 Cargando canciones sin filtro');
+          // Sin filtro, cargar normalmente con paginación
+          response = await axios.get(`${API_URL}/music/songs?limit=${BATCH_SIZE}&offset=0`);
+          console.log('✅ Respuesta sin filtro:', response.data.length, 'canciones');
+        }
+
+        const data = response.data;
 
         // Asegurarse de que data sea un array
         if (Array.isArray(data)) {
           setAvailableSongs(data);
           setFilteredSongs(data);
+          setCurrentOffset(BATCH_SIZE);
+          setHasMore(!genreFilter && data.length === BATCH_SIZE);
         } else {
           console.error('Response is not an array:', data);
           setAvailableSongs([]);
           setFilteredSongs([]);
+          setHasMore(false);
         }
       } catch (error) {
         console.error('Error fetching songs:', error);
         setAvailableSongs([]);
         setFilteredSongs([]);
+        setHasMore(false);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchSongs();
-  }, []);
+    fetchInitialSongs();
+  }, [BATCH_SIZE, genreFilter]);
 
-  // Filtrar canciones basado en búsqueda y género
+  // Filtrar canciones basado en búsqueda (el género ya se filtró en el backend)
   useEffect(() => {
     let filtered = availableSongs;
 
-    // Filtrar por género si hay un genreFilter activo
-    if (genreFilter && genreFilter.length > 0) {
-      filtered = filtered.filter(song => {
-        const songGenre = (song as any).genre;
-        if (!songGenre) return false;
-
-        // Comparación case-insensitive
-        const songGenreLower = songGenre.toLowerCase();
-        return genreFilter.some(filterGenre => filterGenre.toLowerCase() === songGenreLower);
-      });
-    }
+    // PRIMERO: Excluir canciones que ya están seleccionadas
+    filtered = filtered.filter(song => !selectedSongs.some(s => s.id === song.id));
 
     // Filtrar por búsqueda (busca por título, artista y género)
     if (searchTerm.trim() !== '') {
@@ -99,7 +115,7 @@ export function SongSelector({
 
     setFilteredSongs(filtered);
     setDisplayCount(20); // Reset a 20 cuando cambia el filtro
-  }, [searchTerm, availableSongs, genreFilter]);
+  }, [searchTerm, availableSongs, selectedSongs]);
 
   // Actualizar canciones mostradas basado en displayCount
   useEffect(() => {
@@ -107,17 +123,40 @@ export function SongSelector({
   }, [filteredSongs, displayCount]);
 
   // Manejar scroll para cargar más canciones
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+  const handleScroll = async (e: React.UIEvent<HTMLDivElement>) => {
     const element = e.currentTarget;
     const bottom = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
 
-    if (bottom && !loadingMore && displayedSongs.length < filteredSongs.length) {
-      setLoadingMore(true);
-      // Simular un pequeño delay para mejor UX
-      setTimeout(() => {
-        setDisplayCount(prev => prev + 20);
-        setLoadingMore(false);
-      }, 200);
+    if (bottom && !loadingMore) {
+      // Si todavía hay canciones filtradas para mostrar, incrementar displayCount
+      if (displayedSongs.length < filteredSongs.length) {
+        setLoadingMore(true);
+        setTimeout(() => {
+          setDisplayCount(prev => prev + 20);
+          setLoadingMore(false);
+        }, 200);
+      }
+      // Si llegamos al final de las canciones filtradas y hay más en el servidor
+      else if (hasMore && filteredSongs.length >= availableSongs.length - 10) {
+        setLoadingMore(true);
+        try {
+          const response = await axios.get(`${API_URL}/music/songs?limit=${BATCH_SIZE}&offset=${currentOffset}`);
+          const newSongs = response.data;
+
+          if (Array.isArray(newSongs) && newSongs.length > 0) {
+            setAvailableSongs(prev => [...prev, ...newSongs]);
+            setCurrentOffset(prev => prev + BATCH_SIZE);
+            setHasMore(newSongs.length === BATCH_SIZE);
+          } else {
+            setHasMore(false);
+          }
+        } catch (error) {
+          console.error('Error fetching more songs:', error);
+          setHasMore(false);
+        } finally {
+          setLoadingMore(false);
+        }
+      }
     }
   };
 
@@ -143,9 +182,6 @@ export function SongSelector({
     onAddSong(song);
   };
 
-  const isSongSelected = (songId: string) => {
-    return selectedSongs.some(s => s.id === songId);
-  };
 
   const handleSearchChange = (value: string) => {
     if (onSearchChange) {
@@ -183,14 +219,8 @@ export function SongSelector({
           </div>
         ) : (
           <>
-            {displayedSongs.map((song) => {
-            const isSelected = isSongSelected(song.id);
-
-            return (
-              <div
-                key={song.id}
-                className={`song-item ${isSelected ? 'song-item--selected' : ''}`}
-              >
+            {displayedSongs.map((song) => (
+              <div key={song.id} className="song-item">
                 {/* Miniatura de la canción */}
                 <div className="song-item-thumbnail">
                   <img
@@ -204,28 +234,17 @@ export function SongSelector({
                   <span className="song-item-title">{song.title}</span>
                   <span className="song-item-artist">
                     {song.artist}
-                    {(song as any).genre && ` • ${(song as any).genre}`}
+                    {(song as any).genre && ` • ${formatGenre((song as any).genre)}`}
                   </span>
                 </div>
                 <button
                   className="add-song-btn"
-                  onClick={() => {
-                    if (isSelected && onRemoveSong) {
-                      onRemoveSong(song.id);
-                    } else {
-                      handleAddSong(song);
-                    }
-                  }}
+                  onClick={() => handleAddSong(song)}
                 >
-                  {isSelected ? (
-                    <span className="added-label">Agregada</span>
-                  ) : (
-                    <FontAwesomeIcon icon={faPlus} />
-                  )}
+                  <FontAwesomeIcon icon={faPlus} />
                 </button>
               </div>
-            );
-          })}
+            ))}
 
           {/* Indicador de cargando más */}
           {loadingMore && (

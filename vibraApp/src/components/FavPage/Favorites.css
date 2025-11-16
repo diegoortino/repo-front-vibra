@@ -746,3 +746,58 @@
     font-size: 0.65rem;
   }
 }
+
+/* Estilos para secciones de playlists */
+.playlistSectionHeader {
+  grid-column: 1 / -1;
+  margin-bottom: 8px;
+  margin-top: 12px;
+}
+
+/* Primera sección - menos margen superior */
+.playlistSectionHeader:first-of-type {
+  margin-top: 0;
+}
+
+.playlistSectionTitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0;
+  padding: 0;
+  letter-spacing: -0.3px;
+}
+
+/* Línea divisoria entre secciones */
+.playlistDivider {
+  grid-column: 1 / -1;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(139, 92, 246, 0.4) 20%,
+    rgba(139, 92, 246, 0.6) 50%,
+    rgba(139, 92, 246, 0.4) 80%,
+    transparent
+  );
+  margin: 20px 0 5px 0;
+  position: relative;
+}
+
+.playlistDivider::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(139, 92, 246, 0.15) 30%,
+    rgba(139, 92, 246, 0.25) 50%,
+    rgba(139, 92, 246, 0.15) 70%,
+    transparent
+  );
+  filter: blur(2px);
+}

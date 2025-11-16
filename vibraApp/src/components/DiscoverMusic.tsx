@@ -1,44 +1,41 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faHeart, faPlay, faShuffle } from '@fortawesome/free-solid-svg-icons';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect } from 'react';
 import { useMusic } from '../hooks';
 import { useMusicContext } from '../context/MusicContext';
 import type { Song } from '../types';
+import { formatGenre } from '../utils/utilsMusic';
 import '../components/FavPage/Favorites.css';
 
 export function DiscoverMusic() {
-  const { songs, loading, error, fetchSongs } = useMusic();
+  const { songs, loading, error, fetchRandomSongs } = useMusic();
   const { playSong, loadSong, currentSong, randomSongs, setRandomSongs, currentPlaylistId, setCurrentPlaylistId } = useMusicContext();
 
-  const isUpdatingRef = useRef(false);
-  const userRequestedNewSongs = useRef(false);
-
-  // Cargar canciones aleatorias SOLO si no hay ninguna ya cargada
+  // Cargar canciones aleatorias SOLO la primera vez (si no hay ninguna ya cargada)
   useEffect(() => {
     if (randomSongs.length === 0) {
-      fetchSongs(25, 0);
+      fetchRandomSongs(25);
     }
-  }, [randomSongs.length, fetchSongs]);
+  }, []); // Sin dependencias - solo una vez al montar
 
   // Cuando llegan canciones del backend, guardarlas en el contexto
   useEffect(() => {
-    if (songs.length > 0 && randomSongs.length === 0) {
+    if (songs.length > 0) {
       setRandomSongs(songs);
     }
-  }, [songs, randomSongs.length, setRandomSongs]);
+  }, [songs, setRandomSongs]);
 
-  // Cargar la primera canción cuando se cargan las canciones aleatorias
+  // Cargar la primera canción cuando se cargan las canciones aleatorias (solo si no hay nada reproduciéndose)
   useEffect(() => {
     if (randomSongs.length > 0 && !currentSong) {
       const firstSong = randomSongs[0];
       loadSong(firstSong, randomSongs);
     }
-  }, [randomSongs, currentSong, loadSong]);
+  }, [randomSongs.length]); // Solo cuando cambia la cantidad
 
   // Función para generar nueva selección aleatoria
   const handleDiscoverNewMusic = () => {
-    userRequestedNewSongs.current = true;
-    fetchSongs(25, 0);
+    fetchRandomSongs(25);
   };
 
   // Función para reproducir canción aleatoria
@@ -47,36 +44,13 @@ export function DiscoverMusic() {
     playSong(song, randomSongs);
   };
 
-  // Cuando llegan nuevas canciones del fetch manual, actualizar el contexto
-  useEffect(() => {
-    if (songs.length > 0 && randomSongs.length > 0 && !isUpdatingRef.current) {
-      isUpdatingRef.current = true;
-
-      setRandomSongs(songs);
-
-      // Solo cargar la primera canción si el usuario pidió nuevas canciones Y no hay nada reproduciéndose
-      if (userRequestedNewSongs.current && !currentSong) {
-        const firstSong = songs[0];
-        loadSong(firstSong, songs);
-        userRequestedNewSongs.current = false;
-      } else if (userRequestedNewSongs.current) {
-        // Si hay algo reproduciéndose, solo resetear el flag sin interrumpir
-        userRequestedNewSongs.current = false;
-      }
-
-      setTimeout(() => {
-        isUpdatingRef.current = false;
-      }, 100);
-    }
-  }, [songs, randomSongs.length, setRandomSongs, loadSong, currentSong]);
-
   if (error) {
     return (
       <div className="suggestionsContainer">
         <div className="error-message">
           <h3>Error al cargar canciones</h3>
           <p>{error}</p>
-          <button onClick={() => fetchSongs(24, 0)}>Reintentar</button>
+          <button onClick={() => fetchRandomSongs(25)}>Reintentar</button>
         </div>
       </div>
     );
@@ -125,7 +99,7 @@ export function DiscoverMusic() {
                   <p className="cardSubtitle">{song.artist}</p>
                   <div className="cardFooter">
                     <span className="cardStats">
-                      {song.genre || 'Sin género'} • {Math.floor(song.duration / 60)}:{String(song.duration % 60).padStart(2, '0')}
+                      {formatGenre(song.genre)} • {Math.floor(song.duration / 60)}:{String(song.duration % 60).padStart(2, '0')}
                     </span>
                     <button
                       className="likeButton"

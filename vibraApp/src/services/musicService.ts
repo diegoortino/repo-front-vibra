@@ -210,6 +210,17 @@ export const musicService = {
     const response = await apiClient.get<Song[]>('/music/songs', { params });
     return response.data;
   },
+
+  /**
+   * Obtener canciones aleatorias (para "Descubre Nueva Música")
+   *
+   * @param limit - Número de canciones aleatorias (por defecto 25)
+   * @returns Promise con canciones aleatorias
+   */
+  getRandomSongs: async (limit: number = 25): Promise<Song[]> => {
+    const response = await apiClient.get<Song[]>(`/music/songs/random?limit=${limit}`);
+    return response.data;
+  },
 };
 
 /**

@@ -29,6 +29,7 @@ export type MusicContextValue = {
   currentSong: Song | null;
   playSong: (song: Song, songs?: Song[]) => void;
   loadSong: (song: Song, songs?: Song[]) => void;
+  updatePlaylist: (songs: Song[]) => void; // Nueva función para solo actualizar playlist
   randomSongs: Song[];
   setRandomSongs: (songs: Song[]) => void;
   currentPlaylistId: string | null;
@@ -235,6 +236,10 @@ const generarMiniatura = (song: Song) =>
 
   const actualizarPlaylistConCancion = useCallback(
     (song: Song, songsLista: Song[] | undefined, autoPlay?: boolean) => {
+      console.log('🎵 [MusicContext] actualizarPlaylistConCancion llamado');
+      console.log('🎵 [MusicContext] Canción:', song.title);
+      console.log('🎵 [MusicContext] songsLista recibida:', songsLista?.length ?? 'undefined');
+
       if (songsLista && songsLista.length === 0) {
         setPlaylist([]);
         setIndiceActualState(0);
@@ -246,6 +251,7 @@ const generarMiniatura = (song: Song) =>
 
       if (songsLista && songsLista.length > 0) {
         const normalizados = songsLista.map(normalizarCancion);
+        console.log('🎵 [MusicContext] Canciones normalizadas:', normalizados.length);
         let indice = normalizados.findIndex((item) =>
           coincidenCanciones(item, objetivo)
         );
@@ -254,6 +260,8 @@ const generarMiniatura = (song: Song) =>
           listaFinal = [...normalizados, objetivo];
           indice = listaFinal.length - 1;
         }
+        console.log('🎵 [MusicContext] Lista final:', listaFinal.length, 'canciones');
+        console.log('🎵 [MusicContext] Índice seleccionado:', indice);
         setPlaylist(listaFinal);
         setIndiceActualState(normalizarIndice(indice, listaFinal));
         setNombrePlaylist((prev) => prev ?? playlistName);
@@ -316,6 +324,32 @@ const generarMiniatura = (song: Song) =>
     setCurrentPlaylistIdState(id);
   }, []);
 
+  // Nueva función: actualizar playlist sin cambiar canción actual
+  const updatePlaylist = useCallback((songs: Song[]) => {
+    const normalizados = songs.map(normalizarCancion);
+
+    setPlaylist(() => {
+      // Buscar el nuevo índice de la canción actual en la lista actualizada
+      if (currentSong) {
+        const nuevoIndice = normalizados.findIndex((item) =>
+          coincidenCanciones(item, currentSong)
+        );
+
+        // Solo actualizar índice si realmente cambió
+        if (nuevoIndice !== -1 && nuevoIndice !== indiceActual) {
+          setIndiceActualState(nuevoIndice);
+        } else if (nuevoIndice === -1) {
+          // Si no encontramos la canción (fue eliminada), setear a 0
+          setIndiceActualState(0);
+        }
+        // Si nuevoIndice === indiceActual, NO hacer nada (no reiniciar)
+      }
+
+      return normalizados;
+    });
+    // NO tocamos reproduciendo - la música sigue igual
+  }, [setPlaylist, currentSong, indiceActual]);
+
   const value = useMemo<MusicContextValue>(
     () => ({
       idsCanciones,
@@ -329,6 +363,7 @@ const generarMiniatura = (song: Song) =>
       currentSong,
       playSong,
       loadSong,
+      updatePlaylist,
       randomSongs,
       setRandomSongs,
       currentPlaylistId,
@@ -345,6 +380,7 @@ const generarMiniatura = (song: Song) =>
       nombrePlaylist,
       playlist,
       playSong,
+      updatePlaylist,
       randomSongs,
       reproduciendoInterno,
       setIndiceActual,

@@ -1,20 +1,22 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlay, faPlus, faTrash, faEdit } from '@fortawesome/free-solid-svg-icons';
 import './Favorites.css';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useContext, useRef, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { PlaylistCover } from './PlaylistCover';
-import { CreatePlaylistModal } from './CreatePlaylistModal';
 import { ConfirmModal } from '../ConfirmModal/ConfirmModal';
 import { Toast } from '../Toast/Toast';
 import type { ToastType } from '../Toast/Toast';
 import { useMusicContext } from '../../context/MusicContext';
 import { UserContext } from '../../context/currentUserContext';
-import { playlistsService } from '../../services/playlistsService';
-import type { Playlist, PlaylistWithSongs } from '../../services/playlistsService';
-import type { Song } from '../../types';
-import { useContext } from 'react';
+import { playlistService } from '../../services/playlistService';
+import type { Playlist, PlaylistWithSongs, Song } from '../../types';
 
 export function Favorites() {
+  // Navigation hooks
+  const navigate = useNavigate();
+  const location = useLocation();
+
   // Context para reproducir playlists
   const { playSong, currentSong, currentPlaylistId, setCurrentPlaylistId } = useMusicContext();
 
@@ -26,8 +28,6 @@ export function Favorites() {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [loadingPlaylists, setLoadingPlaylists] = useState(true);
   const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingPlaylist, setEditingPlaylist] = useState<PlaylistWithSongs | null>(null);
 
   // Estado para toast notifications
   const [toastMessage, setToastMessage] = useState('');
@@ -38,8 +38,11 @@ export function Favorites() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [playlistToDelete, setPlaylistToDelete] = useState<Playlist | null>(null);
 
+  // Ref para controlar race condition en la creación/edición de playlists
+  const isProcessingPlaylistAction = useRef(false);
+
   // Función para cargar playlists - Mostrar playlists de usuario + 14 públicas
-  const loadPlaylists = async () => {
+  const loadPlaylists = useCallback(async () => {
     try {
       setLoadingPlaylists(true);
 
@@ -47,10 +50,10 @@ export function Favorites() {
       const [userPlaylists, publicPlaylists] = await Promise.all([
         // Playlists privadas del usuario actual
         userId
-          ? playlistsService.getAllPlaylists({ userId, isPublic: false })
+          ? playlistService.getUserPlaylists(userId)
           : Promise.resolve([]),
         // Playlists públicas (máximo 14)
-        playlistsService.getAllPlaylists({ isPublic: true })
+        playlistService.getPublicPlaylists()
       ]);
 
       console.log('User playlists:', userPlaylists.length);
@@ -73,126 +76,134 @@ export function Favorites() {
     } finally {
       setLoadingPlaylists(false);
     }
-  };
-
-  // Cargar playlists al montar el componente
-  useEffect(() => {
-    loadPlaylists();
-  }, []);
+  }, [userId]);
 
   // Helper para mostrar toast
-  const showToast = (message: string, type: ToastType) => {
+  const showToast = useCallback((message: string, type: ToastType) => {
     setToastMessage(message);
     setToastType(type);
     setIsToastVisible(true);
-  };
+  }, []);
 
-  const hideToast = () => {
+  const hideToast = useCallback(() => {
     setIsToastVisible(false);
-  };
+  }, []);
+
+  // Cargar playlists al montar el componente
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    loadPlaylists();
+  }, [loadPlaylists]);
+
+  // Manejar retorno desde la página de crear/editar playlist
+  useEffect(() => {
+    const handleReturnFromPlaylistPage = async () => {
+      const state = location.state as any;
+
+      // Prevenir race condition - si ya se está procesando, salir
+      if (isProcessingPlaylistAction.current) {
+        return;
+      }
+
+      if (state?.action === 'create') {
+        isProcessingPlaylistAction.current = true;
+        try {
+          // Validar límite de 15 playlists
+          if (userId) {
+            const userPlaylists = await playlistService.getUserPlaylists(userId);
+
+            if (userPlaylists.length >= 15) {
+              showToast('Máximo 15 playlists. Elimina una para crear otra.', 'error');
+              navigate('/favorites', { replace: true, state: {} });
+              return;
+            }
+          }
+
+          showToast('Creando playlist...', 'loading');
+
+          const songIds = state.selectedSongs.map((song: Song) => song.id);
+          await playlistService.createPlaylistWithSongs(state.playlistName, songIds, userId);
+
+          await loadPlaylists();
+          showToast('¡Playlist creada exitosamente!', 'success');
+
+          // Limpiar el state
+          navigate('/favorites', { replace: true, state: {} });
+        } catch (error) {
+          console.error('Error creating playlist:', error);
+          showToast('Error al crear playlist', 'error');
+          navigate('/favorites', { replace: true, state: {} });
+        } finally {
+          isProcessingPlaylistAction.current = false;
+        }
+      } else if (state?.action === 'edit') {
+        isProcessingPlaylistAction.current = true;
+        try {
+          showToast('Actualizando playlist...', 'loading');
+
+          const songIds = state.selectedSongs.map((song: Song) => song.id);
+          await playlistService.updatePlaylistWithSongs(state.editingPlaylistId, state.playlistName, songIds);
+
+          await loadPlaylists();
+          showToast('¡Playlist actualizada exitosamente!', 'success');
+
+          // Limpiar el state
+          navigate('/favorites', { replace: true, state: {} });
+        } catch (error) {
+          console.error('Error updating playlist:', error);
+          showToast('Error al actualizar playlist', 'error');
+          navigate('/favorites', { replace: true, state: {} });
+        } finally {
+          isProcessingPlaylistAction.current = false;
+        }
+      }
+    };
+
+    handleReturnFromPlaylistPage();
+  }, [location.state, userId, navigate, showToast, loadPlaylists]);
 
   // Función para reproducir playlist
   const handlePlayPlaylist = async (playlistId: string) => {
     try {
+      console.log('🎵 Intentando reproducir playlist:', playlistId);
       // Desactivar el estado de "creando playlist"
       setIsCreatingPlaylist(false);
 
-      const playlistData = await playlistsService.getPlaylistById(playlistId);
+      const playlistData = await playlistService.getPlaylistWithSongs(playlistId);
+      console.log('📋 Playlist data:', playlistData);
+      console.log('🎶 Canciones en playlist:', playlistData.songs?.length || 0);
 
       if (playlistData.songs && playlistData.songs.length > 0) {
-        const firstSong = playlistData.songs[0];
+        // Extraer objetos de canciones anidadas (estructura: { song: { title, artist, ... } })
+        const songs = playlistData.songs.map((item: any) => item.song || item);
+        const firstSong = songs[0];
+        console.log('▶️ Primera canción:', firstSong.title);
         setCurrentPlaylistId(playlistId);
-        playSong(firstSong, playlistData.songs);
+        playSong(firstSong, songs);
+      } else {
+        console.warn('⚠️ Playlist sin canciones');
       }
     } catch (error) {
-      console.error('Error playing playlist:', error);
+      console.error('❌ Error playing playlist:', error);
     }
   };
 
-  // Función para abrir modal de crear playlist
+  // Función para navegar a crear playlist
   const handleCreatePlaylist = () => {
-    // Activar el estado de "creando playlist" para mostrar el efecto visual
-    setIsCreatingPlaylist(true);
-
-    // Limpiar el currentPlaylistId para que las otras playlists no muestren el efecto
-    setCurrentPlaylistId(null);
-
-    // Limpiar editingPlaylist para modo crear
-    setEditingPlaylist(null);
-
-    // Abrir el modal
-    setIsModalOpen(true);
+    navigate('/favorites/create-playlist');
   };
 
-  // Función para abrir modal de editar playlist
+  // Función para navegar a editar playlist
   const handleEditPlaylist = async (playlist: Playlist) => {
     try {
       // Cargar la playlist completa con sus canciones
-      const playlistData = await playlistsService.getPlaylistById(playlist.id);
-      setEditingPlaylist(playlistData);
-      setIsModalOpen(true);
+      const playlistData = await playlistService.getPlaylistWithSongs(playlist.id);
+      navigate('/favorites/create-playlist', {
+        state: { editingPlaylist: playlistData }
+      });
     } catch (error) {
       console.error('Error loading playlist for editing:', error);
       showToast('Error al cargar playlist', 'error');
-    }
-  };
-
-  // Función para guardar nueva playlist o actualizar existente
-  const handleSavePlaylist = async (playlistName: string, selectedSongs: Song[]) => {
-    try {
-      if (editingPlaylist) {
-        // Modo edición
-        showToast('Actualizando playlist...', 'loading');
-
-        const songIds = selectedSongs.map(song => song.id);
-        await playlistsService.updatePlaylist(editingPlaylist.id, playlistName, songIds);
-
-        // Cerrar modal
-        setIsModalOpen(false);
-        setEditingPlaylist(null);
-
-        // Recargar playlists
-        await loadPlaylists();
-
-        // Mostrar toast de éxito
-        showToast('¡Playlist actualizada exitosamente!', 'success');
-      } else {
-        // Modo crear - Validar límite de 15 playlists
-        if (userId) {
-          const userPlaylists = await playlistsService.getAllPlaylists({ userId, isPublic: false });
-
-          if (userPlaylists.length >= 15) {
-            showToast('Máximo 15 playlists. Elimina una para crear otra.', 'error');
-            setIsCreatingPlaylist(false);
-            return;
-          }
-        }
-
-        showToast('Creando playlist...', 'loading');
-
-        // Extraer IDs de las canciones
-        const songIds = selectedSongs.map(song => song.id);
-
-        // Crear playlist en el backend
-        // TODO: Obtener userId del contexto de autenticación cuando esté disponible
-        // Por ahora, crear playlists sin userId (playlists anónimas/públicas)
-        await playlistsService.createPlaylist(playlistName, songIds, undefined);
-
-        // Cerrar modal
-        setIsModalOpen(false);
-        setIsCreatingPlaylist(false);
-
-        // Recargar playlists
-        await loadPlaylists();
-
-        // Mostrar toast de éxito
-        showToast('¡Playlist creada exitosamente!', 'success');
-      }
-    } catch (error) {
-      console.error('Error saving playlist:', error);
-      const errorMessage = editingPlaylist ? 'Error al actualizar playlist' : 'Error al crear playlist';
-      showToast(errorMessage, 'error');
-      setIsCreatingPlaylist(false);
     }
   };
 
@@ -212,7 +223,7 @@ export function Favorites() {
       showToast('Eliminando playlist...', 'loading');
 
       // Eliminar del backend
-      await playlistsService.deletePlaylist(playlistToDelete.id);
+      await playlistService.deletePlaylist(playlistToDelete.id);
 
       // Recargar playlists
       await loadPlaylists();
@@ -233,11 +244,6 @@ export function Favorites() {
     setPlaylistToDelete(null);
   };
 
-  // Función para cerrar modal
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setIsCreatingPlaylist(false);
-  };
 
   return (
     <>
@@ -258,91 +264,119 @@ export function Favorites() {
                 ))
               ) : (
                 <>
-                  {/* Card para crear nueva playlist - siempre primera */}
-                  <div
-                    className={`playlistCard createPlaylistCard ${isCreatingPlaylist ? 'playlistCard--playing' : ''}`}
-                    onClick={handleCreatePlaylist}
-                  >
-                    <div className="cardCover">
-                      <div className="createPlaylistCover">
-                        <FontAwesomeIcon icon={faPlus} className="createPlaylistIcon" />
+                  {/* Sección: Mis Playlists */}
+                  {userId && (
+                    <>
+                      <div className="playlistSectionHeader">
+                        <h4 className="playlistSectionTitle">🎵 Mis Playlists</h4>
                       </div>
-                    </div>
-                    <div className="cardContent">
-                      <h4 className="cardTitle">Crear Playlist</h4>
-                    </div>
+
+                      {/* Card para crear nueva playlist */}
+                      <div
+                        className={`playlistCard createPlaylistCard ${isCreatingPlaylist ? 'playlistCard--playing' : ''}`}
+                        onClick={handleCreatePlaylist}
+                      >
+                        <div className="cardCover">
+                          <div className="createPlaylistCover">
+                            <FontAwesomeIcon icon={faPlus} className="createPlaylistIcon" />
+                          </div>
+                        </div>
+                        <div className="cardContent">
+                          <h4 className="cardTitle">Crear Playlist</h4>
+                        </div>
+                      </div>
+
+                      {/* Playlists del usuario */}
+                      {playlists
+                        .filter(p => !p.isPublic && p.userId === userId)
+                        .map((playlist) => {
+                          const isPlayingPlaylist = currentPlaylistId === playlist.id && currentSong !== null;
+
+                          return (
+                            <div
+                              key={playlist.id}
+                              className={`playlistCard ${isPlayingPlaylist ? 'playlistCard--playing' : ''}`}
+                              onClick={() => handlePlayPlaylist(playlist.id)}
+                            >
+                              <div className="cardCover">
+                                <PlaylistCover playlist={playlist} />
+                                <div className="playOverlay">
+                                  <FontAwesomeIcon icon={faPlay} />
+                                </div>
+                              </div>
+
+                              <div className="cardContent">
+                                <div className="titleRow">
+                                  <button
+                                    className="editButton"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEditPlaylist(playlist);
+                                    }}
+                                  >
+                                    <FontAwesomeIcon icon={faEdit} />
+                                  </button>
+
+                                  <h4 className="cardTitle">{playlist.name}</h4>
+
+                                  <button
+                                    className="deleteButton"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeletePlaylist(playlist);
+                                    }}
+                                  >
+                                    <FontAwesomeIcon icon={faTrash} />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                      {/* Línea divisoria */}
+                      <div className="playlistDivider"></div>
+                    </>
+                  )}
+
+                  {/* Sección: Playlists Sugeridas */}
+                  <div className="playlistSectionHeader">
+                    <h4 className="playlistSectionTitle">🎧 Playlists Sugeridas</h4>
                   </div>
 
-                  {/* Playlists existentes */}
-                  {playlists.map((playlist) => {
-                    // Verificar si esta playlist está reproduciéndose actualmente
-                    const isPlayingPlaylist = currentPlaylistId === playlist.id && currentSong !== null;
+                  {/* Playlists públicas */}
+                  {playlists
+                    .filter(p => p.isPublic)
+                    .map((playlist) => {
+                      const isPlayingPlaylist = currentPlaylistId === playlist.id && currentSong !== null;
 
-                    // Verificar si es una playlist del usuario (sin género y no pública)
-                    const isUserPlaylist = !playlist.genre && !playlist.isPublic;
+                      return (
+                        <div
+                          key={playlist.id}
+                          className={`playlistCard ${isPlayingPlaylist ? 'playlistCard--playing' : ''}`}
+                          onClick={() => handlePlayPlaylist(playlist.id)}
+                        >
+                          <div className="cardCover">
+                            <PlaylistCover playlist={playlist} />
+                            <div className="playOverlay">
+                              <FontAwesomeIcon icon={faPlay} />
+                            </div>
+                          </div>
 
-                    return (
-                    <div
-                      key={playlist.id}
-                      className={`playlistCard ${isPlayingPlaylist ? 'playlistCard--playing' : ''}`}
-                      onClick={() => handlePlayPlaylist(playlist.id)}
-                    >
-                      <div className="cardCover">
-                        <PlaylistCover playlist={playlist} />
-                        <div className="playOverlay">
-                          <FontAwesomeIcon icon={faPlay} />
+                          <div className="cardContent">
+                            <div className="titleRow">
+                              <h4 className="cardTitle">{playlist.name}</h4>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-
-                      <div className="cardContent">
-                        <div className="titleRow">
-                          {/* Botón Editar */}
-                          {isUserPlaylist && (
-                            <button
-                              className="editButton"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditPlaylist(playlist);
-                              }}
-                            >
-                              <FontAwesomeIcon icon={faEdit} />
-                            </button>
-                          )}
-
-                          {/* Título de la playlist */}
-                          <h4 className="cardTitle">{playlist.name}</h4>
-
-                          {/* Botón Eliminar */}
-                          {isUserPlaylist && (
-                            <button
-                              className="deleteButton"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeletePlaylist(playlist);
-                              }}
-                            >
-                              <FontAwesomeIcon icon={faTrash} />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    );
-                  })}
+                      );
+                    })}
                 </>
               )}
             </div>
           </div>
         </div>
       </div>
-
-      {/* Modal para crear/editar playlist */}
-      <CreatePlaylistModal
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        onSave={handleSavePlaylist}
-        editingPlaylist={editingPlaylist}
-      />
 
       {/* Modal de confirmación de eliminación */}
       <ConfirmModal
