@@ -15,7 +15,7 @@ export function LoginModal({ isOpen, onClose, onOpenRegister}: Props) {
 
         const googleToken = credentialResponse.credential;
 
-        const response = await fetch('http://localhost:3000/auth/google', {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/auth/google`, {
             method: 'POST',
             credentials: 'include',            
             headers: { 'Content-Type': 'application/json' },
