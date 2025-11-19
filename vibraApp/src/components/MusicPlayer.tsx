@@ -67,6 +67,7 @@ export function MusicPlayer() {
   const [mostrarVisualizador, setMostrarVisualizador] = useState(false);
   const [indiceImagen, setIndiceImagen] = useState(0);
   const [mostrarLista, setMostrarLista] = useState(false);
+  const [isImageTransitioning, setIsImageTransitioning] = useState(false);
 
   const titulo = currentSong?.title ?? "";
   const artista = currentSong?.artist ?? "";
@@ -251,12 +252,27 @@ export function MusicPlayer() {
   // Visualizador (5s)
   useEffect(() => {
     if (!mostrarVisualizador) return;
-    const id = window.setInterval(() => {
-      setIndiceImagen((p) => (
-        urlsImagenes.length ? (p + 1) % urlsImagenes.length : 0
-      ));
+
+    const intervalId = window.setInterval(() => {
+      // 1. Activar la transición
+      setIsImageTransitioning(true);
+
+      // 2. Cambiar el índice después de un breve retraso (opcional, pero mejora la sensación)
+      setTimeout(() => {
+        setIndiceImagen((p) => (
+          urlsImagenes.length ? (p + 1) % urlsImagenes.length : 0
+        ));
+        // 3. Desactivar la transición después de que termine la animación (.25s)
+        setTimeout(() => setIsImageTransitioning(false), 300); // 300ms > 250ms de la animación
+      }, 50); // Un pequeño retraso
+
     }, 5000) as unknown as number;
-    return () => window.clearInterval(id);
+
+    // Al desmontar, limpiar el intervalo y también resetear el estado de la transición
+    return () => { 
+      window.clearInterval(intervalId);
+      setIsImageTransitioning(false);
+    };
   }, [mostrarVisualizador, urlsImagenes.length]);
 
   // Cerrar dropdown al hacer click fuera
@@ -381,7 +397,7 @@ export function MusicPlayer() {
       {mostrarVisualizador && (
         <div className="Reproductor__VisualizadorOverlay" onClick={() => setMostrarVisualizador(false)} role="dialog" aria-modal="true">
           <div className="Reproductor__VisualizadorContenido" onClick={(e) => e.stopPropagation()}>
-            <div className="Reproductor__VisualizadorSlider">
+            <div className={`Reproductor__VisualizadorSlider ${isImageTransitioning ? 'is-animating' : ''}`}>
               {urlsImagenes.length > 0 ? (
                 <img
                   key={`vis-${indiceImagen}-${urlsImagenes[indiceImagen] || "ph"}`}

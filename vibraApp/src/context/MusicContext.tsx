@@ -152,6 +152,7 @@ const generarMiniatura = (song: Song) =>
       loading: imagesLoading,
       error: imagesError,
       fetchImages,
+      resetImages,
     } = useImages();
 
     useEffect(() => {
@@ -183,12 +184,12 @@ const generarMiniatura = (song: Song) =>
 
     // 🔥 cuando cambia la canción actual, pedimos imágenes
   useEffect(() => {
-    if (currentSong?.genre) {
+    if (currentSong?.genre && currentSong.duration) {
       const rawGenre = currentSong.genre;
 
       // Normalizar: primera letra mayúscula, resto minúscula
       const normalizedGenre =
-        rawGenre.charAt(0).toUpperCase() + rawGenre.slice(1).toLowerCase();
+         rawGenre.charAt(0).toUpperCase() + rawGenre.slice(1);
 
       console.log(
         "[MusicContext] pidiendo imágenes para genre:",
@@ -201,7 +202,8 @@ const generarMiniatura = (song: Song) =>
 
       fetchImages(normalizedGenre, currentSong.duration ?? 0);
     } else {
-      console.log("[MusicContext] currentSong sin genre:", currentSong);
+        console.log("[MusicContext] currentSong sin genre, reseteando imágenes.");
+        resetImages(); 
     }
   }, [currentSong, fetchImages]);
 

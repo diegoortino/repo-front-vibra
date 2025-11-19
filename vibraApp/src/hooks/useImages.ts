@@ -17,6 +17,15 @@ export function useImages() {
     error: null,
   });
 
+  const resetImages = useCallback(() => {
+        setState((prev) => ({
+            ...prev,
+            images: [],
+            loading: false,
+            error: null,
+        }));
+    }, []);
+
   const fetchImages = useCallback(async (genre: string, duration: number) => {
     setState((prev) => ({ ...prev, loading: true, error: null }));
 
@@ -48,6 +57,7 @@ export function useImages() {
     loading: state.loading,
     error: state.error,
     fetchImages,
+    resetImages,
   };
 }
 
