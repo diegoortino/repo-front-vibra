@@ -6,13 +6,15 @@ import { Waves } from "./components/waves";
 import { GoogleOAuthProvider } from '@react-oauth/google';
 
 function App() {
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "881144321895-esh95d9nnokqigh4dv20upmcfqvg9vjd.apps.googleusercontent.com";
+
   return (
-    <GoogleOAuthProvider clientId="881144321895-esh95d9nnokqigh4dv20upmcfqvg9vjd.apps.googleusercontent.com">
+    <GoogleOAuthProvider clientId={googleClientId}>
       <BrowserRouter>
         <Waves/>
         <Header></Header>
         <Main/>
-        <Footer></Footer>    
+        <Footer></Footer>
       </BrowserRouter>
     </GoogleOAuthProvider>
   );
