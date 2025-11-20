@@ -32,6 +32,17 @@ export const UserProvider = ({ children }: UserProviderProps) => {
   useEffect(() => {
     const controller = new AbortController();
 
+    // Leer token de la URL si existe
+    const urlParams = new URLSearchParams(window.location.search);
+    const tokenFromUrl = urlParams.get('token');
+
+    if (tokenFromUrl) {
+      // Guardar token en cookie
+      document.cookie = `token_vibra=${tokenFromUrl}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+      // Limpiar la URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+
     const loadUser = async () => {
       try {
         const resp = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/auth/me`, {

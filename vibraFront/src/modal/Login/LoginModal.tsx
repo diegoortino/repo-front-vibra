@@ -26,8 +26,10 @@ export function LoginModal({ isOpen, onClose, onOpenRegister}: Props) {
             throw new Error('Error en la autenticación');
         }
 
-        // Redirigir a la app principal
-        window.location.href = 'https://vibra-app-ten.vercel.app/';
+        const data = await response.json();
+
+        // Redirigir a la app principal con el token
+        window.location.href = `https://vibra-app-ten.vercel.app/?token=${data.token}`;
     };
 
     const handleError = () => {
