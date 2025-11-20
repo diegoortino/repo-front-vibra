@@ -34,7 +34,7 @@ export const UserProvider = ({ children }: UserProviderProps) => {
 
     const loadUser = async () => {
       try {
-        const resp = await fetch("http://localhost:3000/auth/me", {
+        const resp = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/auth/me`, {
           method: "GET",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
