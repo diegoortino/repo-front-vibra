@@ -25,7 +25,7 @@ export function RegisterModal({ isOpen, onClose,onOpenLogin }: Props) {
             if (!response.ok) {
                 throw new Error('Error en la autenticación');
             }
-            window.location.href = "http://localhost:5174";
+            window.location.href = "https://vibra-kohl.vercel.app"
 
         };
         const handleError = () => {
