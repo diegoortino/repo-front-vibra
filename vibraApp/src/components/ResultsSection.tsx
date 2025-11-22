@@ -95,7 +95,7 @@ const ResultsSection = () => {
               </div>
             );
         case "results":
-            if (dataFromSearch===null)
+            if (dataFromSearch===null || !Array.isArray(dataFromSearch))
               return <></>;
             return (
               <div className="suggestionsGrid">
@@ -151,7 +151,7 @@ const ResultsSection = () => {
 
     return (
       <>
-        <section className="suggestionsContainer">
+        <section className="resultsContainer">
           <div id="searchResults">
             <Results/>
           </div>

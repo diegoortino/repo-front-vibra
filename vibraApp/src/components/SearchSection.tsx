@@ -169,7 +169,7 @@ const SearchSection = () => {
                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2a2a2a'}
                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                       >
-                        🎵 {suggestion}
+                        {suggestion}
                       </div>
                     ))
                   ) : null}

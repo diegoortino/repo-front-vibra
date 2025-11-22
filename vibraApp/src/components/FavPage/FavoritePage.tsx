@@ -267,7 +267,7 @@ export function Favorites() {
                   {userId && (
                     <>
                       <div className="playlistSectionHeader">
-                        <h4 className="playlistSectionTitle">🎵 Mis Playlists</h4>
+                        <h4 className="playlistSectionTitle">Mis Playlists</h4>
                       </div>
 
                       {/* Card para crear nueva playlist */}
@@ -340,7 +340,7 @@ export function Favorites() {
 
                   {/* Sección: Playlists Sugeridas */}
                   <div className="playlistSectionHeader">
-                    <h4 className="playlistSectionTitle">🎧 Playlists Sugeridas</h4>
+                    <h4 className="playlistSectionTitle">Playlists Sugeridas</h4>
                   </div>
 
                   {/* Playlists públicas */}
