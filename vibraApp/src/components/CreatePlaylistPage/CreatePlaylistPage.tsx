@@ -1,14 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faTrash, faPlay } from '@fortawesome/free-solid-svg-icons';
-import './CreatePlaylistPage.css';
 import { SongSelector } from '../FavPage/SongSelector';
 import { AlertModal } from '../AlertModal/AlertModal';
 import { useMusicContext } from '../../context/MusicContext';
 import { useGenres } from '../../hooks/useGenres';
 import { formatGenre } from '../../utils/utilsMusic';
 import type { Song, PlaylistWithSongs } from '../../types';
+import { Icons } from '../Icons';
 
 interface LocationState {
   editingPlaylist?: PlaylistWithSongs;
@@ -135,7 +133,7 @@ export function CreatePlaylistPage() {
       {/* Header */}
       <div className="playlist-header">
         <button className="back-btn" onClick={handleCancel}>
-          <FontAwesomeIcon icon={faArrowLeft} />
+          <Icons.ArrowLeft />
           <span>Volver</span>
         </button>
         <h1 className="page-title">
@@ -229,14 +227,14 @@ export function CreatePlaylistPage() {
                     onClick={() => handlePlaySong(song)}
                     aria-label="Reproducir canción"
                   >
-                    <FontAwesomeIcon icon={faPlay} />
+                    <Icons.Play />
                   </button>
                   <button
                     className="delete-btn"
                     onClick={() => handleRemoveSong(song.id)}
                     aria-label="Eliminar canción"
                   >
-                    <FontAwesomeIcon icon={faTrash} />
+                    <Icons.Trash />
                   </button>
                 </div>
               ))}

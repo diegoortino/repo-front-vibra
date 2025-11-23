@@ -1,14 +1,12 @@
 import { useEffect, useState, useCallback, useContext } from 'react';
 import { useParams } from 'react-router-dom';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTrash, faArrowUp } from '@fortawesome/free-solid-svg-icons';
 import { UserContext } from '../../context/currentUserContext';
 import { useMusicContext } from '../../context/MusicContext';
 import { ConfirmModal } from '../ConfirmModal/ConfirmModal';
 import { Toast } from '../Toast/Toast';
 import type { ToastType } from '../Toast/Toast';
-import './SongHistory.css';
 import { NavLink } from 'react-router-dom';
+import { Icons } from '../Icons';
 
 interface Song {
   id: string;
@@ -231,7 +229,7 @@ export function SongHistory() {
                           });
                         }}
                       >
-                        <FontAwesomeIcon icon={faTrash} />
+                        <Icons.Trash />
                       </button>
                     )}
                 </div>
@@ -272,7 +270,7 @@ export function SongHistory() {
         onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
         title="Volver arriba"
       >
-        <FontAwesomeIcon icon={faArrowUp} />
+        <Icons.ArrowUp />
       </button>
     </div>
   );

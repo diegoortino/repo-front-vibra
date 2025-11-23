@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import './Follows.css'
 import { FollowSkeleton } from './FollowSkeleton';
 export function Follows(){
     const [isLoading, setIsLoading]= useState<Boolean>(false) //false mientras conectamos front y back

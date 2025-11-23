@@ -1,4 +1,3 @@
-import './ProfileSkeleton.css'
 export function ProfileSkeleton() {
   return (
     <div className="profileContainer">

@@ -1,11 +1,9 @@
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHeart, faPlay, faShuffle } from '@fortawesome/free-solid-svg-icons';
 import { useEffect } from 'react';
 import { useMusic } from '../hooks';
 import { useMusicContext } from '../context/MusicContext';
 import type { Song } from '../types';
 import { formatGenre } from '../utils/utilsMusic';
-import '../components/FavPage/Favorites.css';
+import { Icons } from './Icons';
 
 export function DiscoverMusic() {
   const { songs, loading, error, fetchRandomSongs } = useMusic();
@@ -66,7 +64,7 @@ export function DiscoverMusic() {
             onClick={handleDiscoverNewMusic}
             disabled={loading}
           >
-            <FontAwesomeIcon icon={faShuffle} className="discoverButton__icon" />
+            <Icons.Shuffle className="discoverButton__icon" />
             {loading ? 'Cargando...' : 'Descubre Más'}
           </button>
         </div>
@@ -89,7 +87,7 @@ export function DiscoverMusic() {
                     backgroundPosition: 'center'
                   }}>
                     <div className="playOverlay">
-                      <FontAwesomeIcon icon={faPlay} />
+                      <Icons.Play />
                     </div>
                   </div>
                 </div>
@@ -107,7 +105,7 @@ export function DiscoverMusic() {
                         e.stopPropagation();
                       }}
                     >
-                      <FontAwesomeIcon icon={faHeart} />
+                      <Icons.Heart />
                     </button>
                   </div>
                 </div>

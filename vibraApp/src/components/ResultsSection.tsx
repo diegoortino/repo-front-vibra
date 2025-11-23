@@ -4,8 +4,7 @@
 
 /* Dependencies  */
 import { useEffect, useState } from "react";
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlay } from '@fortawesome/free-solid-svg-icons';
+import { Icons } from "./Icons";
 
 /* types */
 import type {ResultProps} from "../types/resultProps";
@@ -20,7 +19,6 @@ import { useMusicContext }  from "../context/MusicContext";
 // Removed formatArtist and formatTitle - now showing raw data from DB
 
 /* styles */
-import './FavPage/Favorites.css';
 
 const ResultsSection = () => {
     const {toReproduce, dataFromSearch} = useSearchContext();
@@ -78,7 +76,7 @@ const ResultsSection = () => {
                       }}
                     >
                       <div className="playOverlay">
-                        <FontAwesomeIcon icon={faPlay} />
+                        <Icons.Play />
                       </div>
                     </div>
                   </div>
@@ -96,7 +94,7 @@ const ResultsSection = () => {
               </div>
             );
         case "results":
-            if (dataFromSearch===null)
+            if (dataFromSearch===null || !Array.isArray(dataFromSearch))
               return <></>;
             return (
               <div className="suggestionsGrid">
@@ -120,7 +118,7 @@ const ResultsSection = () => {
                           }}
                         >
                           <div className="playOverlay">
-                            <FontAwesomeIcon icon={faPlay} />
+                            <Icons.Play />
                           </div>
                         </div>
                       </div>
@@ -152,7 +150,7 @@ const ResultsSection = () => {
 
     return (
       <>
-        <section className="suggestionsContainer">
+        <section className="resultsContainer">
           <div id="searchResults">
             <Results/>
           </div>

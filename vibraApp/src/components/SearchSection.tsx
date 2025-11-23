@@ -9,7 +9,6 @@ import {useEffect, useState } from "react";
 import {useSearchContext} from "../hooks/useSearchContext";
 
 /* styles */
-import './search-section.css';
 
 const SearchSection = () => {
   const [valueCurrent, setValueCurrent] = useState("");
@@ -170,7 +169,7 @@ const SearchSection = () => {
                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2a2a2a'}
                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                       >
-                        🎵 {suggestion}
+                        {suggestion}
                       </div>
                     ))
                   ) : null}

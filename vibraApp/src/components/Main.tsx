@@ -24,7 +24,6 @@ import { useSearchHandlers } from "../hooks";
 import SearchContext, { type SearchContextValue } from "../context/searchContext";
 
 /* styles */
-import './Main.css'
 import SongHistory from "./SongHistory/SongHistory";
 
 const SEARCH_RESULTS_KEY = 'vibra_search_results';

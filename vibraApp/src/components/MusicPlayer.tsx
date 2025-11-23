@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { useMusicContext } from "../context/MusicContext";
-import "./MusicPlayer.css";
 import { Icons } from "./Icons";
 
 type Backend = "cloudinary" | "youtube" | null;
@@ -14,19 +13,21 @@ declare global {
   }
 }
 
+// Loads the YouTube iframe API once and reuses the same promise for later calls.
 function loadYouTubeAPI(): Promise<void> {
   if (window.YT && window.YT.Player) return Promise.resolve();
   if (!window._ytApiLoadingPromise) {
     window._ytApiLoadingPromise = new Promise<void>((resolve) => {
-      const s = document.createElement("script");
-      s.src = "https://www.youtube.com/iframe_api";
-      document.body.appendChild(s);
+      const script = document.createElement("script");
+      script.src = "https://www.youtube.com/iframe_api";
+      document.body.appendChild(script);
       window.onYouTubeIframeAPIReady = () => resolve();
     });
   }
   return window._ytApiLoadingPromise!;
 }
 
+// Formats seconds into an hh:mm:ss or m:ss label.
 function formatTime(totalSeconds: number) {
   const sec = Math.max(0, Math.floor(totalSeconds || 0));
   const h = Math.floor(sec / 3600);
@@ -38,43 +39,43 @@ function formatTime(totalSeconds: number) {
 }
 
 export function MusicPlayer() {
+  // Shared context state (aliased to English names for clarity).
   const {
     playlist,
     currentSong,
-    indiceActual,
-    setIndiceActual,
-    urlsImagenes,
-    reproduciendo,
-    setReproduciendo,
+    indiceActual: currentIndex,
+    setIndiceActual: setCurrentIndex,
+    urlsImagenes: imageUrls,
+    reproduciendo: isPlaying,
+    setReproduciendo: setIsPlaying,
   } = useMusicContext();
 
-  const ytContainerRef = useRef<HTMLDivElement | null>(null);
+  // External players and DOM refs.
+  const youtubeContainerRef = useRef<HTMLDivElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const ytPlayerRef = useRef<any>(null);
-  const ytReadyRef = useRef<boolean>(false);
-  const ytReadyResolvers = useRef<((value: void | PromiseLike<void>) => void)[]>([]);
-  const waitForYTReady = useCallback(() => new Promise<void>((res) => {
-    if (ytReadyRef.current) return res();
-    ytReadyResolvers.current.push(res);
-  }), []);
+  const youtubePlayerRef = useRef<any>(null);
+  const youtubeReadyRef = useRef<boolean>(false);
+  const youtubeReadyResolvers = useRef<((value: void | PromiseLike<void>) => void)[]>([]);
+  const playlistDropdownRef = useRef<HTMLDivElement | null>(null);
+  const activeSongButtonRef = useRef<HTMLButtonElement | null>(null);
   const backendRef = useRef<Backend>(null);
-  const listaRef = useRef<HTMLDivElement | null>(null);
-  const activeSongRef = useRef<HTMLButtonElement | null>(null);
-  const [overrideBackend, setOverrideBackend] = useState<Backend>(null);
-  const [progress, setProgress] = useState({ t: 0, d: 0, pct: 0 });
-  const [volume, setVolume] = useState(1);
-  const [volumeBeforeMute, setVolumeBeforeMute] = useState(1);
-  const [mostrarVisualizador, setMostrarVisualizador] = useState(false);
-  const [indiceImagen, setIndiceImagen] = useState(0);
-  const [indiceAnterior, setIndiceAnterior] = useState<number | null>(null);
-  const [mostrarLista, setMostrarLista] = useState(false);
-  const [isImageTransitioning, setIsImageTransitioning] = useState(false);
-  const [isMobileExpanded, setIsMobileExpanded] = useState(false);
-  const indiceImagenRef = useRef(0);
+  const imageIndexRef = useRef(0);
 
-  const titulo = currentSong?.title;
-  const artista = currentSong?.artist;
-  const miniYT = currentSong?.youtubeId
+  // Local UI state.
+  const [manualBackendOverride, setManualBackendOverride] = useState<Backend>(null);
+  const [progress, setProgress] = useState({ time: 0, duration: 0, percent: 0 });
+  const [volume, setVolume] = useState(1);
+  const [previousVolume, setPreviousVolume] = useState(1);
+  const [isVisualizerOpen, setIsVisualizerOpen] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [previousImageIndex, setPreviousImageIndex] = useState<number | null>(null);
+  const [isPlaylistOpen, setIsPlaylistOpen] = useState(false);
+  const [isImageTransitioning, setIsImageTransitioning] = useState(false);
+
+  // Derived display data.
+  const title = currentSong?.title;
+  const artist = currentSong?.artist;
+  const youtubeThumbnail = currentSong?.youtubeId
     ? `https://img.youtube.com/vi/${currentSong.youtubeId}/hqdefault.jpg`
     : undefined;
 
@@ -85,508 +86,520 @@ export function MusicPlayer() {
     return <Icons.Volume />;
   }, [volume]);
 
-    // NUEVO: función utilitaria
-  const fallbackToYouTube = useCallback(() => {
-    // evitamos loops si no hay youtubeId
-    if (!currentSong?.youtubeId) {
-      console.warn("[MusicPlayer] Cloudinary falló y no hay youtubeId para fallback");
-      setReproduciendo(false);
+  // Resolves the first YouTube onReady event as a promise.
+  const waitForYouTubeReady = useCallback(
+    () =>
+      new Promise<void>((resolve) => {
+        if (youtubeReadyRef.current) return resolve();
+        youtubeReadyResolvers.current.push(resolve);
+      }),
+    [],
+  );
+
+  // Remember the current index ref without rerenders.
+  useEffect(() => {
+    imageIndexRef.current = currentImageIndex;
+  }, [currentImageIndex]);
+
+  // When a track ends, move to the next one (looping).
+  const handleTrackEnded = useCallback(() => {
+    if (!playlist?.length) {
+      setIsPlaying(false);
       return;
     }
-    console.warn("[MusicPlayer] Fallback a YouTube por error de Cloudinary");
-    // pausamos cualquier audio que haya quedado intentando cargar
-    try { audioRef.current?.pause(); } catch {}
-    // forzamos override al backend
-    setOverrideBackend("youtube");
-    // mantenemos la intención de reproducción actual
-    // (el effect de `reproduciendo` hará play/pause en YT)
-  }, [currentSong, setReproduciendo]);
+    const nextIndex = currentIndex + 1 >= playlist.length ? 0 : currentIndex + 1;
+    setCurrentIndex(nextIndex);
+    setIsPlaying(true);
+  }, [currentIndex, playlist, setCurrentIndex, setIsPlaying]);
 
+  // Forces playback to YouTube when Cloudinary fails.
+  const fallbackToYouTube = useCallback(() => {
+    if (!currentSong?.youtubeId) {
+      console.warn("[MusicPlayer] Cloudinary failed and no YouTube id is available");
+      setIsPlaying(false);
+      return;
+    }
+    try {
+      audioRef.current?.pause();
+    } catch {
+      /* ignore */
+    }
+    setManualBackendOverride("youtube");
+  }, [currentSong, setIsPlaying]);
+
+  // Decides which backend to use for the current track.
   const backend: Backend = useMemo(() => {
     if (!currentSong) return null;
-    if (overrideBackend) return overrideBackend;
-    return currentSong.cloudinaryUrl ? "cloudinary" : (currentSong.youtubeId ? "youtube" : null);
-  }, [currentSong, overrideBackend]);
+    if (manualBackendOverride) return manualBackendOverride;
+    return currentSong.cloudinaryUrl ? "cloudinary" : currentSong.youtubeId ? "youtube" : null;
+  }, [currentSong, manualBackendOverride]);
 
-  // Inicializar/montar backend cuando cambia la canción o el backend
+  // Navigates to the previous track in a circular list.
+  const handlePrevious = () => {
+    if (!playlist?.length) return;
+    const previousIndex = currentIndex - 1 < 0 ? playlist.length - 1 : currentIndex - 1;
+    setCurrentIndex(previousIndex);
+    setIsPlaying(true);
+  };
+
+  // Navigates to the next track in a circular list.
+  const handleNext = () => {
+    if (!playlist?.length) return;
+    const nextIndex = currentIndex + 1 >= playlist.length ? 0 : currentIndex + 1;
+    setCurrentIndex(nextIndex);
+    setIsPlaying(true);
+  };
+
+  // Toggles between play and pause.
+  const handleTogglePlay = () => setIsPlaying(!isPlaying);
+
+  // Updates progress when the range input is dragged.
+  const handleProgressChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const percent = Number(event.target.value) || 0;
+    const duration = progress.duration || 0;
+    const target = (percent / 100) * duration;
+    const activeBackend = backendRef.current;
+    if (activeBackend === "cloudinary" && audioRef.current) {
+      audioRef.current.currentTime = target;
+    } else if (activeBackend === "youtube" && youtubePlayerRef.current) {
+      youtubePlayerRef.current.seekTo?.(target, true);
+    }
+  };
+
+  // Adjusts volume for both backends.
+  const handleVolumeChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const nextVolume = Math.max(0, Math.min(1, Number(event.target.value) || 0));
+    setVolume(nextVolume);
+    const activeBackend = backendRef.current;
+    if (activeBackend === "cloudinary" && audioRef.current) {
+      audioRef.current.volume = nextVolume;
+    } else if (activeBackend === "youtube" && youtubePlayerRef.current) {
+      youtubePlayerRef.current.setVolume?.(Math.round(nextVolume * 100));
+    }
+  };
+
+  // Remembers the previous volume and toggles mute on/off.
+  const handleMuteToggle = () => {
+    const activeBackend = backendRef.current;
+    if (volume > 0) {
+      setPreviousVolume(volume);
+      setVolume(0);
+      if (activeBackend === "cloudinary" && audioRef.current) {
+        audioRef.current.volume = 0;
+      } else if (activeBackend === "youtube" && youtubePlayerRef.current) {
+        youtubePlayerRef.current.setVolume?.(0);
+      }
+    } else {
+      const restoreVolume = previousVolume > 0 ? previousVolume : 1;
+      setVolume(restoreVolume);
+      if (activeBackend === "cloudinary" && audioRef.current) {
+        audioRef.current.volume = restoreVolume;
+      } else if (activeBackend === "youtube" && youtubePlayerRef.current) {
+        youtubePlayerRef.current.setVolume?.(Math.round(restoreVolume * 100));
+      }
+    }
+  };
+
+  // Playlist info for the dropdown list.
+  const playlistItems = useMemo(() => {
+    const items =
+      playlist?.map((song, index) => ({
+        id: song.id || song.youtubeId || `track-${index}`,
+        title: song.title || `Song ${index + 1}`,
+        artist: song.artist,
+        index,
+      })) ?? [];
+    return items;
+  }, [playlist]);
+
+  // Mounts the right backend (audio tag or YouTube iframe) whenever the song or backend changes.
   useEffect(() => {
-    let cancel = false;
-
-    async function setup() {
+    async function setupBackend() {
       if (!currentSong) return;
 
       backendRef.current = backend;
 
-      // Asegurar exclusividad: nunca dos fuentes sonando a la vez
       try {
-        if (audioRef.current) audioRef.current.pause();
-      } catch {}
+        audioRef.current?.pause();
+      } catch {
+        /* ignore */
+      }
       try {
-        if (ytPlayerRef.current?.pauseVideo) ytPlayerRef.current.pauseVideo();
-        if (ytPlayerRef.current?.stopVideo) ytPlayerRef.current.stopVideo();
-      } catch {}
+        youtubePlayerRef.current?.pauseVideo?.();
+        youtubePlayerRef.current?.stopVideo?.();
+      } catch {
+        /* ignore */
+      }
 
-
-      // CLOUDINARY => <audio>
       if (backend === "cloudinary") {
-        console.log("[MusicPlayer] Reproduciendo vía Cloudinary:", currentSong?.title, currentSong?.id);
-        const a = (audioRef.current ?? new Audio());
-        audioRef.current = a;
+        const audio = audioRef.current ?? new Audio();
+        audioRef.current = audio;
 
-        // Limpieza de handlers previos (evita duplicados)
-        a.onerror = null;
-        a.onended = null;
+        audio.onerror = null;
+        audio.onended = null;
 
-        a.preload = "auto";
-        a.crossOrigin = "anonymous";
-        if (currentSong.cloudinaryUrl) a.src = currentSong.cloudinaryUrl;
+        audio.preload = "auto";
+        audio.crossOrigin = "anonymous";
+        if (currentSong.cloudinaryUrl) audio.src = currentSong.cloudinaryUrl;
 
-        // NUEVO: si falla la carga/reproducción (404, CORS, etc.), hacemos fallback
-        a.onerror = () => {
-          // Algunas veces el error llega asincrónico, hacemos un pequeño guard
-          // y nos aseguramos de caer a YouTube solo una vez.
-          if (overrideBackend !== "youtube") {
-            fallbackToYouTube();
-          }
+        audio.onerror = () => {
+          if (manualBackendOverride !== "youtube") fallbackToYouTube();
         };
 
-        // Reiniciar solo al cargar NUEVA canción (no en toggle play/pause)
-        a.currentTime = 0;
-        a.volume = volume;
-        a.onended = () => onEnded();
+        audio.currentTime = 0;
+        audio.volume = volume;
+        audio.onended = () => handleTrackEnded();
 
-        if (reproduciendo) {
-          a.play().catch((err) => {
-            console.warn("[MusicPlayer] Error en play() de Cloudinary, forzando fallback:", err);
-            if (overrideBackend !== "youtube") {
-              fallbackToYouTube();
-            }
+        if (isPlaying) {
+          audio.play().catch((error) => {
+            if (manualBackendOverride !== "youtube") fallbackToYouTube();
+            console.warn("[MusicPlayer] Cloudinary play() failed, moving to YouTube:", error);
           });
         } else {
-          a.pause();
+          audio.pause();
         }
         return;
       }
 
-      // YOUTUBE => Iframe API
-      if (backend === "youtube" && ytContainerRef.current) {
-        console.log("[MusicPlayer] Reproduciendo vía YouTube:", currentSong?.title, currentSong?.youtubeId);
+      if (backend === "youtube" && youtubeContainerRef.current) {
         await loadYouTubeAPI();
-        if (!ytPlayerRef.current) {
-          ytPlayerRef.current = new window.YT.Player(ytContainerRef.current, {
+        if (!youtubePlayerRef.current) {
+          youtubePlayerRef.current = new window.YT.Player(youtubeContainerRef.current, {
             height: "0",
             width: "0",
             playerVars: { controls: 0, disablekb: 1, fs: 0, rel: 0, modestbranding: 1 },
             events: {
               onReady: () => {
-                ytReadyRef.current = true;
-                console.log("[MusicPlayer] YT onReady");
-                while (ytReadyResolvers.current.length) ytReadyResolvers.current.shift()?.();
+                youtubeReadyRef.current = true;
+                while (youtubeReadyResolvers.current.length) youtubeReadyResolvers.current.shift()?.();
               },
-              onStateChange: (e: any) => {
-                if (e?.data === 0) onEnded();
+              onStateChange: (event: any) => {
+                if (event?.data === 0) handleTrackEnded();
               },
             },
           });
         }
-        const p = ytPlayerRef.current;
+
+        const player = youtubePlayerRef.current;
         const id = currentSong.youtubeId;
-        if (!ytReadyRef.current) await waitForYTReady();
-        if (id) {
-          try {
-            if (reproduciendo) p.loadVideoById(id); else p.cueVideoById(id);
-            p.setVolume?.(Math.round(volume * 100));
-            console.log("[MusicPlayer] YT set id:", id, "reproduciendo:", reproduciendo);
-          } catch (err) {
-            console.warn("[MusicPlayer] YT no listo aún, reintento suave", err);
-            setTimeout(() => {
-              try {
-                if (reproduciendo) p.loadVideoById(id); else p.cueVideoById(id);
-                p.setVolume?.(Math.round(volume * 100));
-              } catch (e) {
-                console.error("[MusicPlayer] Falló segunda invocación YT API", e);
-              }
-            }, 50);
-          }
+        if (!youtubeReadyRef.current) await waitForYouTubeReady();
+        if (!id) return;
+
+        try {
+          if (isPlaying) player.loadVideoById(id);
+          else player.cueVideoById(id);
+          player.setVolume?.(Math.round(volume * 100));
+        } catch (error) {
+          setTimeout(() => {
+            try {
+              if (isPlaying) player.loadVideoById(id);
+              else player.cueVideoById(id);
+              player.setVolume?.(Math.round(volume * 100));
+            } catch (retryError) {
+              console.error("[MusicPlayer] YouTube API failed on retry", retryError);
+            }
+          }, 50);
         }
       }
     }
 
-    setup();
-    return () => { cancel = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [backend, currentSong]);
+    setupBackend();
+  }, [backend, currentSong, fallbackToYouTube, handleTrackEnded, isPlaying, manualBackendOverride, volume, waitForYouTubeReady]);
 
-  // Reaccionar si cambia "reproduciendo"
+  // Sync play/pause intent with the active backend.
   useEffect(() => {
-    const b = backendRef.current;
-    if (b === "cloudinary") {
-      const a = audioRef.current; if (!a) return;
-      if (reproduciendo) a.play().catch(() => {}); else a.pause();
-    } else if (b === "youtube") {
-      const p = ytPlayerRef.current; if (!p) return;
-      if (reproduciendo) p.playVideo?.(); else p.pauseVideo?.();
+    const activeBackend = backendRef.current;
+    if (activeBackend === "cloudinary") {
+      const audio = audioRef.current;
+      if (!audio) return;
+      if (isPlaying) audio.play().catch(() => {});
+      else audio.pause();
+    } else if (activeBackend === "youtube") {
+      const player = youtubePlayerRef.current;
+      if (!player) return;
+      if (isPlaying) player.playVideo?.();
+      else player.pauseVideo?.();
     }
-  }, [reproduciendo]);
+  }, [isPlaying]);
 
+  // Reset manual overrides when a new song is selected.
   useEffect(() => {
-    setOverrideBackend(null);
+    setManualBackendOverride(null);
   }, [currentSong]);
 
-  // Polling de progreso (250ms)
+  // Poll current progress to keep the UI updated.
   useEffect(() => {
-    const id = window.setInterval(() => {
-      const b = backendRef.current;
-      let t = 0, d = 0;
-      if (b === "cloudinary" && audioRef.current) {
-        t = audioRef.current.currentTime || 0;
-        d = audioRef.current.duration || 0;
-      } else if (b === "youtube" && ytPlayerRef.current) {
-        t = ytPlayerRef.current.getCurrentTime?.() || 0;
-        const maybeD = ytPlayerRef.current.getDuration?.();
-        d = Number.isFinite(maybeD) ? maybeD : 0;
+    const intervalId = window.setInterval(() => {
+      const activeBackend = backendRef.current;
+      let currentTime = 0;
+      let duration = 0;
+
+      if (activeBackend === "cloudinary" && audioRef.current) {
+        currentTime = audioRef.current.currentTime || 0;
+        duration = audioRef.current.duration || 0;
+      } else if (activeBackend === "youtube" && youtubePlayerRef.current) {
+        currentTime = youtubePlayerRef.current.getCurrentTime?.() || 0;
+        const maybeDuration = youtubePlayerRef.current.getDuration?.();
+        duration = Number.isFinite(maybeDuration) ? maybeDuration : 0;
       }
-      const pct = d > 0 ? Math.min(100, (t / d) * 100) : 0;
-      setProgress({ t, d, pct });
+
+      const percent = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
+      setProgress({ time: currentTime, duration, percent });
     }, 50) as unknown as number;
-    return () => window.clearInterval(id);
+
+    return () => window.clearInterval(intervalId);
   }, []);
 
-  // Sincronizar ref del índice de imagen (evita dependencias costosas)
+  // Auto-rotate images inside the visualizer every 5s.
   useEffect(() => {
-    indiceImagenRef.current = indiceImagen;
-  }, [indiceImagen]);
+    if (!isVisualizerOpen || imageUrls.length === 0) return;
 
-  // Visualizador (5s) con animación de entrada/salida
-  useEffect(() => {
-    if (!mostrarVisualizador || urlsImagenes.length === 0) return;
-
-    const intervaloId = window.setInterval(() => {
-      setIndiceAnterior(indiceImagenRef.current);
+    const intervalId = window.setInterval(() => {
+      setPreviousImageIndex(imageIndexRef.current);
       setIsImageTransitioning(true);
-      setIndiceImagen((prev) => {
-        const next = urlsImagenes.length ? (prev + 1) % urlsImagenes.length : 0;
-        indiceImagenRef.current = next;
+      setCurrentImageIndex((prev) => {
+        const next = imageUrls.length ? (prev + 1) % imageUrls.length : 0;
+        imageIndexRef.current = next;
         return next;
       });
       window.setTimeout(() => setIsImageTransitioning(false), 320);
     }, 5000) as unknown as number;
 
     return () => {
-      window.clearInterval(intervaloId);
+      window.clearInterval(intervalId);
       setIsImageTransitioning(false);
-      setIndiceAnterior(null);
+      setPreviousImageIndex(null);
     };
-  }, [mostrarVisualizador, urlsImagenes.length]);
+  }, [imageUrls, isVisualizerOpen]);
 
-  // Al cerrar el visualizador, limpiar estados de transición
+  // Clean transition flags when the visualizer closes.
   useEffect(() => {
-    if (!mostrarVisualizador) {
+    if (!isVisualizerOpen) {
       setIsImageTransitioning(false);
-      setIndiceAnterior(null);
+      setPreviousImageIndex(null);
     }
-  }, [mostrarVisualizador]);
+  }, [isVisualizerOpen]);
 
-  // Cerrar dropdown al hacer click fuera
+  // Close playlist dropdown when clicking outside.
   useEffect(() => {
-    if (!mostrarLista) return;
-    const onDocClick = (e: MouseEvent) => {
-      const node = listaRef.current;
+    if (!isPlaylistOpen) return;
+    const onDocumentClick = (event: MouseEvent) => {
+      const node = playlistDropdownRef.current;
       if (!node) return;
-      if (e.target instanceof Node && !node.contains(e.target)) {
-        setMostrarLista(false);
+      if (event.target instanceof Node && !node.contains(event.target)) {
+        setIsPlaylistOpen(false);
       }
     };
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
-  }, [mostrarLista]);
+    document.addEventListener("mousedown", onDocumentClick);
+    return () => document.removeEventListener("mousedown", onDocumentClick);
+  }, [isPlaylistOpen]);
 
-  // Scroll automático a la canción activa cuando se abre el dropdown
+  // Scroll the active song into view when the dropdown opens.
   useEffect(() => {
-    if (mostrarLista && activeSongRef.current) {
-      activeSongRef.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center'
+    if (isPlaylistOpen && activeSongButtonRef.current) {
+      activeSongButtonRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
       });
     }
-  }, [mostrarLista]);
+  }, [isPlaylistOpen]);
 
-  const onEnded = useCallback(() => {
-    if (!playlist?.length) { setReproduciendo(false); return; }
-    // Si es la última canción, volver a la primera (loop)
-    const next = indiceActual + 1 >= playlist.length ? 0 : indiceActual + 1;
-    setIndiceActual(next);
-    setReproduciendo(true);
-  }, [indiceActual, playlist, setIndiceActual, setReproduciendo]);
-
-  const onPrev = () => {
-    // Si estoy en la primera canción, ir a la última (circular)
-    const prev = indiceActual - 1 < 0 ? playlist.length - 1 : indiceActual - 1;
-    setIndiceActual(prev);
-    setReproduciendo(true);
-  };
-  const onNext = () => {
-    // Si estoy en la última canción, ir a la primera (circular)
-    const next = indiceActual + 1 >= playlist.length ? 0 : indiceActual + 1;
-    setIndiceActual(next);
-    setReproduciendo(true);
-  };
-
-  const onTogglePlay = () => setReproduciendo(!reproduciendo);
-
-  const onChangeProgress = (e: ChangeEvent<HTMLInputElement>) => {
-    const pct = Number(e.target.value) || 0;
-    const d = progress.d || 0;
-    const target = (pct / 100) * d;
-    const b = backendRef.current;
-    if (b === "cloudinary" && audioRef.current) {
-      audioRef.current.currentTime = target;
-    } else if (b === "youtube" && ytPlayerRef.current) {
-      ytPlayerRef.current.seekTo?.(target, true);
-    }
-  };
-
-  const onChangeVolume = (e: ChangeEvent<HTMLInputElement>) => {
-    const v = Math.max(0, Math.min(1, Number(e.target.value) || 0));
-    setVolume(v);
-    const b = backendRef.current;
-    if (b === "cloudinary" && audioRef.current) {
-      audioRef.current.volume = v;
-    } else if (b === "youtube" && ytPlayerRef.current) {
-      ytPlayerRef.current.setVolume?.(Math.round(v * 100));
-    }
-  };
-
-  const onToggleMute = () => {
-    const b = backendRef.current;
-    if (volume > 0) {
-      // Silenciar: guardar volumen actual y setear a 0
-      setVolumeBeforeMute(volume);
-      setVolume(0);
-      if (b === "cloudinary" && audioRef.current) {
-        audioRef.current.volume = 0;
-      } else if (b === "youtube" && ytPlayerRef.current) {
-        ytPlayerRef.current.setVolume?.(0);
-      }
-    } else {
-      // Reactivar: restaurar volumen anterior
-      const restoreVolume = volumeBeforeMute > 0 ? volumeBeforeMute : 1;
-      setVolume(restoreVolume);
-      if (b === "cloudinary" && audioRef.current) {
-        audioRef.current.volume = restoreVolume;
-      } else if (b === "youtube" && ytPlayerRef.current) {
-        ytPlayerRef.current.setVolume?.(Math.round(restoreVolume * 100));
-      }
-    }
-  };
-
-  // Lista visible (títulos desde el contexto directamente)
-  const itemsLista = useMemo(() => {
-    const items = playlist?.map((s, index) => ({
-      id: s.id || s.youtubeId || `track-${index}`,
-      titulo: s.title || `Canción ${index + 1}`,
-      autor: s.artist,
-      index,
-    })) ?? [];
-    console.log('🎵 [MusicPlayer] itemsLista actualizado. Total canciones:', items.length);
-    return items;
-  }, [playlist]);
-
-  const tiempoActual = formatTime(progress.t);
-  const tiempoTotal = progress.d > 0 ? formatTime(progress.d) : "--:--";
-
-  const noHayCancion = !currentSong;
+  const currentTimeLabel = formatTime(progress.time);
+  const totalTimeLabel = progress.duration > 0 ? formatTime(progress.duration) : "--:--";
+  const isSongMissing = !currentSong;
 
   return (
     <>
-      {/* Montaje oculto del backend */}
-      <div className="mp-iframes-ocultos" aria-hidden="true">
-        {/* YouTube container (alto/ancho 0 por CSS) */}
-        <div ref={ytContainerRef} />
-        {/* Audio HTML (oculto) */}
+      {/* Hidden mounts for both backends so they are ready when needed. */}
+      <div className="playerHiddenIframes" aria-hidden="true">
+        <div ref={youtubeContainerRef} />
         <audio ref={audioRef} style={{ display: "none" }} preload="auto" />
       </div>
 
-      {/* Overlay de visualizador */}
-      {mostrarVisualizador && (
-        <div className="Reproductor__VisualizadorOverlay" onClick={() => setMostrarVisualizador(false)} role="dialog" aria-modal="true">
-          <div className="Reproductor__VisualizadorContenido" onClick={(e) => e.stopPropagation()}>
-            <div className={`Reproductor__VisualizadorSlider ${isImageTransitioning ? "is-animating" : ""}`}>
-              {indiceAnterior !== null && urlsImagenes[indiceAnterior] && (
+      {/* Visualizer overlay with AI images. */}
+      {isVisualizerOpen && (
+        <div
+          className="playerVisualizerOverlay"
+          onClick={() => setIsVisualizerOpen(false)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="playerVisualizerContent" onClick={(event) => event.stopPropagation()}>
+            <div className={`playerVisualizerSlider ${isImageTransitioning ? "is-animating" : ""}`}>
+              {previousImageIndex !== null && imageUrls[previousImageIndex] && (
                 <img
-                  key={`vis-out-${indiceAnterior}-${urlsImagenes[indiceAnterior]}`}
-                  src={urlsImagenes[indiceAnterior]}
+                  key={`vis-out-${previousImageIndex}-${imageUrls[previousImageIndex]}`}
+                  src={imageUrls[previousImageIndex]}
                   alt=""
-                  className="Reproductor__Slide Reproductor__Slide--out"
+                  className="playerSlide playerSlideOut"
                   draggable={false}
                 />
               )}
 
-              {urlsImagenes.length > 0 ? (
+              {imageUrls.length > 0 ? (
                 <img
-                  key={`vis-in-${indiceImagen}-${urlsImagenes[indiceImagen] || "ph"}`}
-                  src={urlsImagenes[indiceImagen] || undefined}
+                  key={`vis-in-${currentImageIndex}-${imageUrls[currentImageIndex] || "placeholder"}`}
+                  src={imageUrls[currentImageIndex] || undefined}
                   alt=""
-                  className="Reproductor__Slide Reproductor__Slide--in"
+                  className="playerSlide playerSlideIn"
                   draggable={false}
                 />
               ) : (
-                <div className="Reproductor__Slide Reproductor__Slide--in" aria-hidden="true">No hay imágenes</div>
+                <div className="playerSlide playerSlideIn" aria-hidden="true">
+                  No images available
+                </div>
               )}
             </div>
           </div>
         </div>
       )}
 
-      {/* Layout principal (conserva clases existentes) */}
-      <div className={`Reproductor__ContenedorPrincipal ${isMobileExpanded ? "is-mobile-expanded" : ""}`}>
-        <div className="Reproductor__MobileBar" onClick={() => setIsMobileExpanded((v) => !v)}>
-          <div className="Reproductor__MobileControls">
-            <div className="Reproductor__MobileTrack">{titulo || "Sin título"}</div>
-            {artista && <div className="Reproductor__MobileArtist">{artista}</div>}
-            <div className="Reproductor__MobileButtons">
-              <button type="button" className="Reproductor__MobileActionButton" onClick={(e) => { e.stopPropagation(); onPrev(); }} aria-label="Anterior">
-                <Icons.Prev />
-              </button>
-              <button type="button" className="Reproductor__MobileActionButton" onClick={(e) => { e.stopPropagation(); onTogglePlay(); }} aria-label={reproduciendo ? "Pausar" : "Reproducir"}>
-                {reproduciendo ? <Icons.Pause /> : <Icons.Play />}
-              </button>
-              <button type="button" className="Reproductor__MobileActionButton" onClick={(e) => { e.stopPropagation(); onNext(); }} aria-label="Siguiente">
-                <Icons.Next />
-              </button>
-            </div>
-          </div>
-          <div className="Reproductor__MobileActions" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="Reproductor__MobileActionButton" onClick={() => setMostrarVisualizador(true)} aria-label="Visualizador IA" title="Visualizador IA">
-              <Icons.Image />
-            </button>
-            <button
-              type="button"
-              className="Reproductor__MobileActionButton"
-              onClick={() => { setIsMobileExpanded(true); setMostrarLista((v) => !v); }}
-              aria-label="Lista de reproducción"
-              aria-expanded={mostrarLista}
+      {/* Main layout with cover, controls and extras. */}
+      <div className="playerContainer">
+        <div className="playerGridLayout">
+          <nav className="playerLeftPanel">
+            <div
+              className="playerThumbnail"
+              onClick={() => !isSongMissing && setIsVisualizerOpen(true)}
+              title={isSongMissing ? "" : "Open image visualizer"}
+              style={{ cursor: isSongMissing ? "default" : "pointer" }}
             >
-              <Icons.List />
-            </button>
-            <button
-              type="button"
-              className={`Reproductor__MobileActionButton ${isMobileExpanded ? "is-rotated" : ""}`}
-              onClick={() => setIsMobileExpanded((v) => !v)}
-              aria-label={isMobileExpanded ? "Contraer" : "Expandir"}
-              aria-expanded={isMobileExpanded}
-            >
-              <span aria-hidden="true"><Icons.ChevronDown /></span>
-            </button>
-          </div>
-        </div>
-
-        <div className="Reproductor__LayoutDetallado">
-          {/* IZQ: portada + info */}
-          <nav className="Reproductor__ZonaIzquierda">
-            <div className="Reproductor__ContenedorMiniatura" onClick={() => !noHayCancion && setMostrarVisualizador(true)} title={noHayCancion ? "" : "Abrir visualizador de imágenes"} style={{ cursor: noHayCancion ? 'default' : 'pointer' }}>
-              {miniYT && (
-                <img src={miniYT} alt={titulo ? `Portada: ${titulo}` : "Portada"} className="Reproductor__ImagenMiniatura" draggable={false} />
+              {youtubeThumbnail && (
+                <img
+                  src={youtubeThumbnail}
+                  alt={title ? `Cover: ${title}` : "Cover"}
+                  className="playerThumbnailImage"
+                  draggable={false}
+                />
               )}
             </div>
-            <div className="Reproductor__ContenedorInfoPista">
-              <div className="Reproductor__TituloPista">{noHayCancion ? "Sin canción" : titulo}</div>
-              <div className="Reproductor__AutorPista">{noHayCancion ? "Selecciona una canción para reproducir" : artista}</div>
+            <div className="playerTrackInfo">
+              <div className="playerTrackTitle">{isSongMissing ? "No track" : title}</div>
+              <div className="playerTrackArtist">
+                {isSongMissing ? "Select a track to start playing" : artist}
+              </div>
             </div>
           </nav>
 
-          {/* CENTRO: controles + progreso */}
-          <nav className="Reproductor__ZonaCentral">
-            <div className="Reproductor__ContenedorControles">
-              <button className="Reproductor__BotonControl" onClick={onPrev} aria-label="Anterior" disabled={noHayCancion}>
-                <span aria-hidden="true"><Icons.Prev /></span>
+          <nav className="playerCenterPanel">
+            <div className="playerControls">
+              <button
+                className="playerControlButton"
+                onClick={handlePrevious}
+                aria-label="Previous"
+                disabled={isSongMissing}
+              >
+                <span aria-hidden="true">
+                  <Icons.Prev />
+                </span>
               </button>
-              <button className="Reproductor__BotonControl" onClick={onTogglePlay} aria-label={reproduciendo ? "Pausar" : "Reproducir"} disabled={noHayCancion}>
-                <span aria-hidden="true">{reproduciendo ? <Icons.Pause /> : <Icons.Play />}</span>
+              <button
+                className="playerControlButton"
+                onClick={handleTogglePlay}
+                aria-label={isPlaying ? "Pause" : "Play"}
+                disabled={isSongMissing}
+              >
+                <span aria-hidden="true">{isPlaying ? <Icons.Pause /> : <Icons.Play />}</span>
               </button>
-              <button className="Reproductor__BotonControl" onClick={onNext} aria-label="Siguiente" disabled={noHayCancion}>
-                <span aria-hidden="true"><Icons.Next /></span>
+              <button
+                className="playerControlButton"
+                onClick={handleNext}
+                aria-label="Next"
+                disabled={isSongMissing}
+              >
+                <span aria-hidden="true">
+                  <Icons.Next />
+                </span>
               </button>
             </div>
-            <div className="Reproductor__ContenedorProgreso">
-              <div className="Reproductor__Tiempo Reproductor__TiempoActual">{tiempoActual}</div>
+            <div className="playerProgress">
+              <div className="playerTimeLabel playerTimeCurrent">{currentTimeLabel}</div>
               <input
                 type="range"
                 min={0}
                 max={100}
                 step={0.1}
-                value={progress.pct}
-                onChange={onChangeProgress}
-                className="Reproductor__BarraProgreso"
-                aria-label="Barra de progreso"
-                disabled={noHayCancion}
+                value={progress.percent}
+                onChange={handleProgressChange}
+                className="playerProgressSlider"
+                aria-label="Progress bar"
+                disabled={isSongMissing}
               />
-              <div className="Reproductor__Tiempo Reproductor__TiempoTotal">{tiempoTotal}</div>
+              <div className="playerTimeLabel playerTimeTotal">{totalTimeLabel}</div>
             </div>
           </nav>
 
-          {/* DER: volumen + lista + visualizador */}
-          <nav className="Reproductor__ZonaDerecha">
+          <nav className="playerRightPanel">
             <button
               type="button"
-              className="Reproductor__VolumenBtn"
-              onClick={onToggleMute}
-              aria-label={volume > 0 ? "Silenciar" : "Activar sonido"}
-              title={volume > 0 ? "Silenciar" : "Activar sonido"}
+              className="playerVolumeButton"
+              onClick={handleMuteToggle}
+              aria-label={volume > 0 ? "Mute" : "Unmute"}
+              title={volume > 0 ? "Mute" : "Unmute"}
             >
               <span aria-hidden="true">{volumeIcon}</span>
             </button>
             <input
-              className="Reproductor__VolumenRange"
+              className="playerVolumeSlider"
               type="range"
               min={0}
               max={1}
               step={0.01}
               value={volume}
-              onChange={onChangeVolume}
-              aria-label="Control de volumen"
+              onChange={handleVolumeChange}
+              aria-label="Volume control"
             />
 
-            {/* Lista simple */}
-            <div className="Reproductor__ListaControlGroup" ref={listaRef}>
+            <div className="playerListControlGroup" ref={playlistDropdownRef}>
               <button
                 type="button"
-                className="Reproductor__ControlLista"
-                onClick={() => setMostrarLista((v) => !v)}
+                className="playerListToggle"
+                onClick={() => setIsPlaylistOpen((value) => !value)}
                 aria-haspopup="true"
-                aria-expanded={mostrarLista}
-                aria-controls="Reproductor__ListaDropdown"
-                title="Lista de reproducción"
+                aria-expanded={isPlaylistOpen}
+                aria-controls="playerListDropdown"
+                title="Playlist"
               >
-                <span aria-hidden="true"><Icons.List /></span>
+                <span aria-hidden="true">
+                  <Icons.List />
+                </span>
               </button>
 
-              <div className={`Reproductor__ControlListaWrapper ${mostrarLista ? "is-open" : ""}`}>
-                {mostrarLista && (
-                  <div className="Reproductor__ListaDropdown" id="Reproductor__ListaDropdown" role="menu" aria-label="Lista de reproducción">
-                    {itemsLista.length === 0 ? (
-                      <p className="Reproductor__ListaVacia">No hay canciones.</p>
+              <div className={`playerListDropdownWrapper ${isPlaylistOpen ? "is-open" : ""}`}>
+                {isPlaylistOpen && (
+                  <div
+                    className="playerListDropdown"
+                    id="playerListDropdown"
+                    role="menu"
+                    aria-label="Playlist"
+                  >
+                    {playlistItems.length === 0 ? (
+                      <p className="playerListEmpty">No songs available.</p>
                     ) : (
-                      <ul className="Reproductor__ListaElementos">
-                        {itemsLista.map(({ id, titulo, autor, index }) => {
-                          const activo = index === indiceActual;
+                      <ul className="playerListItems">
+                        {playlistItems.map(({ id, title: songTitle, artist: songArtist, index }) => {
+                          const isActive = index === currentIndex;
                           return (
                             <li key={id} role="none">
                               <button
-                                ref={activo ? activeSongRef : null}
+                                ref={isActive ? activeSongButtonRef : null}
                                 type="button"
-                                className={`Reproductor__ListaCancion ${activo ? "is-active" : ""}`}
-                                onClick={() => { setIndiceActual(index); setReproduciendo(true); setMostrarLista(false); }}
+                                className={`playerListItem ${isActive ? "is-active" : ""}`}
+                                onClick={() => {
+                                  setCurrentIndex(index);
+                                  setIsPlaying(true);
+                                  setIsPlaylistOpen(false);
+                                }}
                                 role="menuitemradio"
-                                aria-checked={activo}
+                                aria-checked={isActive}
                               >
-                                <span className="Reproductor__ListaIndice">{index + 1}</span>
-                                <span className="Reproductor__ListaTexto">
-                                  <span className="Reproductor__ListaTitulo">{titulo}</span>
-                                  {autor && <span className="Reproductor__ListaAutor">{autor}</span>}
+                                <span className="playerListIndex">{index + 1}</span>
+                                <span className="playerListText">
+                                  <span className="playerListTitle">{songTitle}</span>
+                                  {songArtist && <span className="playerListArtist">{songArtist}</span>}
                                 </span>
-                                {activo && (
-                                  <span className="Reproductor__ListaIcono" aria-hidden="true">
+                                {isActive && (
+                                  <span className="playerListIcon" aria-hidden="true">
                                     <Icons.Play />
                                   </span>
                                 )}
@@ -603,13 +616,15 @@ export function MusicPlayer() {
 
             <button
               type="button"
-              className="Reproductor__ControlImagenesIA"
-              onClick={() => setMostrarVisualizador(true)}
-              title="Visualizador IA"
-              aria-label="Visualizador IA"
-              disabled={noHayCancion}
+              className="playerAiImagesButton"
+              onClick={() => setIsVisualizerOpen(true)}
+              title="AI visualizer"
+              aria-label="AI visualizer"
+              disabled={isSongMissing}
             >
-              <span aria-hidden="true"><Icons.Image /></span>
+              <span aria-hidden="true">
+                <Icons.Image />
+              </span>
             </button>
           </nav>
         </div>

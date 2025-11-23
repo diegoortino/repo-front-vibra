@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faSearch } from '@fortawesome/free-solid-svg-icons';
 import axios from 'axios';
-import './SongSelector.css';
 import type { Song } from '../../types';
 import { formatGenre } from '../../utils/utilsMusic';
+import { Icons } from '../Icons';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -195,8 +193,8 @@ export function SongSelector({
     <div className="song-selector">
       {/* Buscador - solo mostrar si showSearchBox es true */}
       {showSearchBox && (
-        <div className="search-box">
-          <FontAwesomeIcon icon={faSearch} className="search-icon" />
+          <div className="search-box">
+          <Icons.Search className="search-icon" />
           <input
             type="text"
             className="search-input"
@@ -241,7 +239,7 @@ export function SongSelector({
                   className="add-song-btn"
                   onClick={() => handleAddSong(song)}
                 >
-                  <FontAwesomeIcon icon={faPlus} />
+                  <Icons.Plus />
                 </button>
               </div>
             ))}
