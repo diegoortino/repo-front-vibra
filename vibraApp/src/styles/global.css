@@ -357,6 +357,7 @@ body {
   padding: 2rem;
   backdrop-filter: blur(10px);
   box-shadow: 0 8px 32px var(--bg-overlay-05);
+  position: relative;
 }
 
 .search-form {
@@ -4262,4 +4263,373 @@ overflow: hidden;
   border-color: var(--color-error);
   transform: translateY(-2px);
   box-shadow: 0 8px 20px var(--color-error-30);
+}
+
+/* ====================================================================== */
+/* Responsive layout */
+/* ====================================================================== */
+
+@media (max-width: 1024px) {
+  body {
+    padding-top: 72px;
+    padding-bottom: 140px;
+  }
+
+  #root {
+    max-width: 100%;
+  }
+
+  .main-content {
+    padding: 1.5rem 1.25rem;
+  }
+
+  .search-container {
+    padding: 1.5rem;
+  }
+
+  .search-form {
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .search-btn {
+    padding-inline: 1.5rem;
+  }
+
+  .results-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .sidebar {
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: auto;
+    width: 100%;
+    height: auto;
+    flex-direction: column;
+    padding: 10px 14px;
+    border-right: none;
+    border-bottom: 1px solid var(--bg-overlay-08);
+    z-index: 70;
+  }
+
+  .sidebar.expanded {
+    width: 100%;
+  }
+
+  .sidebar__nav {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    height: auto;
+    flex-wrap: wrap;
+  }
+
+  .sidebar__nav > li {
+    flex: 1 1 48px;
+  }
+
+  .sidebar__nav > li:last-child {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+  }
+
+  .sidebar__item {
+    grid-template-columns: 1fr;
+    justify-content: center;
+    padding: 10px;
+  }
+
+  .sidebar__label {
+    display: none;
+  }
+
+  .suggestionsContainer,
+  .followsContainer,
+  .create-playlist-page {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .suggestionsContainer {
+    padding: 2.5rem 1.25rem 6rem;
+  }
+
+  .create-playlist-page {
+    padding: var(--spacing-3xl) 1.25rem 6rem;
+  }
+
+  .playlistsGrid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  }
+
+  .playlist-header {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
+
+  .page-title {
+    text-align: left;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .playlist-content {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .playlist-left-section,
+  .playlist-right-section {
+    width: 100%;
+  }
+
+  .cancionesDiv {
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .song-history-container {
+    padding: 1.25rem;
+  }
+
+  .song-history-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .song-history-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .song-info {
+    width: 100%;
+  }
+
+  .delete-song-btn {
+    margin-left: 0;
+    align-self: flex-end;
+  }
+
+  .playerContainer {
+    width: 100%;
+    margin: 0;
+    left: 0;
+    right: 0;
+    padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0));
+  }
+
+  .playerGridLayout {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .playerVolumeSlider {
+    width: 120px;
+  }
+}
+
+@media (max-width: 768px) {
+  body {
+    padding-top: 76px;
+    padding-bottom: 170px;
+  }
+
+  .main-content {
+    padding: 1rem 0.75rem 7rem;
+  }
+
+  .welcome-title {
+    font-size: clamp(1.6rem, 7vw, 2.3rem);
+    margin-bottom: 2rem;
+  }
+
+  .search-section {
+    margin: 0 0 2rem;
+  }
+
+  .search-container {
+    padding: 1.25rem;
+  }
+
+  .search-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .results-grid {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+  }
+
+  .result-thumbnail {
+    height: 150px;
+  }
+
+  .suggestionsGrid,
+  .playlistsGrid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 16px;
+  }
+
+  .suggestionsContainer {
+    padding: 2rem 1rem 6rem;
+  }
+
+  .suggestionsTitle {
+    font-size: 1.8rem;
+  }
+
+  .discoverButton {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .playlist-header {
+    flex-direction: column;
+  }
+
+  .header-actions {
+    justify-content: flex-start;
+  }
+
+  .selected-song-card {
+    gap: 0.75rem;
+  }
+
+  .followsTitle {
+    font-size: 3rem;
+  }
+
+  .divCards {
+    padding-left: 1rem;
+    padding-right: 1rem;
+    gap: 1rem;
+  }
+
+  .cancionHeader,
+  .cancionBody,
+  .cancionFooter {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .cancionFooter {
+    gap: 12px;
+  }
+
+  .cancionFooter button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .song-history-item {
+    gap: 12px;
+  }
+
+  .playerContainer {
+    border-radius: 12px 12px 0 0;
+  }
+
+  .playerGridLayout {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .playerLeftPanel {
+    justify-content: center;
+  }
+
+  .playerTrackInfo {
+    text-align: center;
+  }
+
+  .playerTrackTitle,
+  .playerTrackArtist {
+    white-space: normal;
+  }
+
+  .playerProgress {
+    grid-template-columns: 36px 1fr 36px;
+    gap: 8px;
+  }
+
+  .playerRightPanel {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  .playerVolumeSlider {
+    width: 100%;
+  }
+
+  .playerVolumeButton {
+    width: 44px;
+    height: 44px;
+  }
+
+  .playerListControlGroup {
+    order: 3;
+  }
+
+  .playerListDropdown {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .main-content {
+    padding: 0.75rem 0.75rem 7.5rem;
+  }
+
+  .search-container {
+    padding: 1rem;
+  }
+
+  .results-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+
+  .result-thumbnail {
+    height: 135px;
+  }
+
+  .suggestionsTitle {
+    font-size: 1.5rem;
+  }
+
+  .playlist-header button {
+    width: 100%;
+  }
+
+  .toast {
+    width: 90%;
+    min-width: 0;
+    top: 18%;
+  }
+
+  .alert-modal,
+  .confirm-modal {
+    width: calc(100% - 24px);
+    min-width: 0;
+    padding: 24px;
+  }
 }
