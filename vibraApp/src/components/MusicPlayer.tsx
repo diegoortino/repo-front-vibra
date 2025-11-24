@@ -60,6 +60,8 @@ export function MusicPlayer() {
   const activeSongButtonRef = useRef<HTMLButtonElement | null>(null);
   const backendRef = useRef<Backend>(null);
   const imageIndexRef = useRef(0);
+  const isPlayingRef = useRef(isPlaying);
+  const volumeRef = useRef(1);
 
   // Local UI state.
   const [manualBackendOverride, setManualBackendOverride] = useState<Backend>(null);
@@ -100,6 +102,15 @@ export function MusicPlayer() {
   useEffect(() => {
     imageIndexRef.current = currentImageIndex;
   }, [currentImageIndex]);
+
+  // Keep simple refs in sync without retriggering backend setup.
+  useEffect(() => {
+    isPlayingRef.current = isPlaying;
+  }, [isPlaying]);
+
+  useEffect(() => {
+    volumeRef.current = volume;
+  }, [volume]);
 
   // When a track ends, move to the next one (looping).
   const handleTrackEnded = useCallback(() => {
@@ -218,6 +229,8 @@ export function MusicPlayer() {
       if (!currentSong) return;
 
       backendRef.current = backend;
+      const shouldAutoPlay = isPlayingRef.current;
+      const targetVolume = volumeRef.current;
 
       try {
         audioRef.current?.pause();
@@ -247,10 +260,10 @@ export function MusicPlayer() {
         };
 
         audio.currentTime = 0;
-        audio.volume = volume;
+        audio.volume = targetVolume;
         audio.onended = () => handleTrackEnded();
 
-        if (isPlaying) {
+        if (shouldAutoPlay) {
           audio.play().catch((error) => {
             if (manualBackendOverride !== "youtube") fallbackToYouTube();
             console.warn("[MusicPlayer] Cloudinary play() failed, moving to YouTube:", error);
@@ -286,15 +299,15 @@ export function MusicPlayer() {
         if (!id) return;
 
         try {
-          if (isPlaying) player.loadVideoById(id);
+          if (shouldAutoPlay) player.loadVideoById(id);
           else player.cueVideoById(id);
-          player.setVolume?.(Math.round(volume * 100));
+          player.setVolume?.(Math.round(targetVolume * 100));
         } catch (error) {
           setTimeout(() => {
             try {
-              if (isPlaying) player.loadVideoById(id);
+              if (shouldAutoPlay) player.loadVideoById(id);
               else player.cueVideoById(id);
-              player.setVolume?.(Math.round(volume * 100));
+              player.setVolume?.(Math.round(targetVolume * 100));
             } catch (retryError) {
               console.error("[MusicPlayer] YouTube API failed on retry", retryError);
             }
@@ -304,7 +317,7 @@ export function MusicPlayer() {
     }
 
     setupBackend();
-  }, [backend, currentSong, fallbackToYouTube, handleTrackEnded, isPlaying, manualBackendOverride, volume, waitForYouTubeReady]);
+  }, [backend, currentSong, fallbackToYouTube, handleTrackEnded, manualBackendOverride, waitForYouTubeReady]);
 
   // Sync play/pause intent with the active backend.
   useEffect(() => {
@@ -460,7 +473,7 @@ export function MusicPlayer() {
           <nav className="playerLeftPanel">
             <div
               className="playerThumbnail"
-              onClick={() => !isSongMissing && setIsVisualizerOpen(true)}
+              onClick={() => !isSongMissing && setIsVisualizerOpen((value) => !value)}
               title={isSongMissing ? "" : "Open image visualizer"}
               style={{ cursor: isSongMissing ? "default" : "pointer" }}
             >
@@ -617,7 +630,7 @@ export function MusicPlayer() {
             <button
               type="button"
               className="playerAiImagesButton"
-              onClick={() => setIsVisualizerOpen(true)}
+              onClick={() => setIsVisualizerOpen((value) => !value)}
               title="AI visualizer"
               aria-label="AI visualizer"
               disabled={isSongMissing}
