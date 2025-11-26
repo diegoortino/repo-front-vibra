@@ -1,6 +1,5 @@
 import { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import './Follows.css'
 import { FollowSkeleton } from './FollowSkeleton';
 import { UserContext } from '../../context/currentUserContext';
 import { useMusicContext } from '../../context/MusicContext';
