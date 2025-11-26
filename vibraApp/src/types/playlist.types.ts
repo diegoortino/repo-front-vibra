@@ -107,7 +107,7 @@ export interface RemoveSongResponse {
  * Parámetros para filtrar playlists
  */
 export interface PlaylistFilterParams {
-  userId?: string;               // Filtrar por usuario
+  userId?: string | null;               // Filtrar por usuario
   isPublic?: boolean;            // Filtrar por públicas/privadas
   search?: string;               // Buscar por nombre
   limit?: number;                // Límite de resultados

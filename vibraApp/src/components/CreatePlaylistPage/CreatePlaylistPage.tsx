@@ -28,6 +28,7 @@ export function CreatePlaylistPage() {
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
   const [isGenreMenuOpen, setIsGenreMenuOpen] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isPublic, setIsPublic] = useState(false);
 
   // Scroll al inicio cuando se monta el componente
   useEffect(() => {
@@ -39,6 +40,7 @@ export function CreatePlaylistPage() {
     if (editingPlaylist) {
       setPlaylistName(editingPlaylist.name);
       setSelectedSongs(editingPlaylist.songs || []);
+      setIsPublic(editingPlaylist.isPublic || false);
     }
   }, [editingPlaylist]);
 
@@ -94,7 +96,8 @@ export function CreatePlaylistPage() {
         action: editingPlaylist ? 'edit' : 'create',
         playlistName,
         selectedSongs: songsToSave,
-        editingPlaylistId: editingPlaylist?.id
+        editingPlaylistId: editingPlaylist?.id,
+        isPublic
       }
     });
   }, [playlistName, selectedSongs, editingPlaylist, navigate, showAlert]);
@@ -167,7 +170,15 @@ export function CreatePlaylistPage() {
               onChange={(e) => setPlaylistName(e.target.value)}
               maxLength={30}
             />
-
+            <select
+              className="playlist-visibility-select"
+              value={isPublic ? 'public' : 'private'}
+              onChange={(e) => setIsPublic(e.target.value === 'public')}
+            >
+              <option value="public">Pública</option>
+              <option value="private">Privada</option>
+            </select>
+            
             <input
               type="text"
               className="playlist-search-input"
