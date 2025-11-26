@@ -1,5 +1,4 @@
 import { useState, useEffect, useContext } from "react";
-import "./configUserModal.css";
 import { UserContext } from "../../../context/currentUserContext";
 
 

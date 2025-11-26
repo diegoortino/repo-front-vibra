@@ -1,6 +1,3 @@
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlay, faPlus, faTrash, faEdit } from '@fortawesome/free-solid-svg-icons';
-import './Favorites.css';
 import { useEffect, useState, useContext, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { PlaylistCover } from './PlaylistCover';
@@ -11,6 +8,7 @@ import { useMusicContext } from '../../context/MusicContext';
 import { UserContext } from '../../context/currentUserContext';
 import { playlistService } from '../../services/playlistService';
 import type { Playlist, PlaylistWithSongs, Song } from '../../types';
+import { Icons } from '../Icons';
 
 export function Favorites() {
   // Navigation hooks
@@ -268,7 +266,7 @@ export function Favorites() {
                   {userId && (
                     <>
                       <div className="playlistSectionHeader">
-                        <h4 className="playlistSectionTitle">🎵 Mis Playlists</h4>
+                        <h4 className="playlistSectionTitle">Mis Playlists</h4>
                       </div>
 
                       {/* Card para crear nueva playlist */}
@@ -278,7 +276,7 @@ export function Favorites() {
                       >
                         <div className="cardCover">
                           <div className="createPlaylistCover">
-                            <FontAwesomeIcon icon={faPlus} className="createPlaylistIcon" />
+                            <Icons.Plus className="createPlaylistIcon" />
                           </div>
                         </div>
                         <div className="cardContent">
@@ -301,7 +299,7 @@ export function Favorites() {
                               <div className="cardCover">
                                 <PlaylistCover playlist={playlist} />
                                 <div className="playOverlay">
-                                  <FontAwesomeIcon icon={faPlay} />
+                                  <Icons.Play />
                                 </div>
                               </div>
 
@@ -314,7 +312,7 @@ export function Favorites() {
                                       handleEditPlaylist(playlist);
                                     }}
                                   >
-                                    <FontAwesomeIcon icon={faEdit} />
+                                    <Icons.Edit />
                                   </button>
 
                                   <h4 className="cardTitle">{playlist.name}</h4>
@@ -326,7 +324,7 @@ export function Favorites() {
                                       handleDeletePlaylist(playlist);
                                     }}
                                   >
-                                    <FontAwesomeIcon icon={faTrash} />
+                                    <Icons.Trash />
                                   </button>
                                 </div>
                               </div>
@@ -341,7 +339,7 @@ export function Favorites() {
 
                   {/* Sección: Playlists Sugeridas */}
                   <div className="playlistSectionHeader">
-                    <h4 className="playlistSectionTitle">🎧 Playlists Sugeridas</h4>
+                    <h4 className="playlistSectionTitle">Playlists Sugeridas</h4>
                   </div>
 
                   {/* Playlists públicas */}
@@ -359,7 +357,7 @@ export function Favorites() {
                           <div className="cardCover">
                             <PlaylistCover playlist={playlist} />
                             <div className="playOverlay">
-                              <FontAwesomeIcon icon={faPlay} />
+                              <Icons.Play />
                             </div>
                           </div>
 

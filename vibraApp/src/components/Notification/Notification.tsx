@@ -1,8 +1,5 @@
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faCheckCircle, faTimesCircle} from "@fortawesome/free-regular-svg-icons"
-import { faExclamationCircle} from "@fortawesome/free-solid-svg-icons"
 import { useEffect, useState } from "react"
-import "./Notification.css"
+import { Icons } from "../Icons"
 
 type NotificationProps={
     type:"success"| "warning" | "error",
@@ -20,12 +17,16 @@ export function Notification({type, message}:NotificationProps){
         };
     }, [message]);
 
-    const icon = type === "success" ? faCheckCircle : type === "warning" ? faExclamationCircle : faTimesCircle;
+    const renderIcon = () => {
+        if (type === "success") return <Icons.CheckCircleOutline className={`icon ${type}`} />;
+        if (type === "warning") return <Icons.ExclamationCircle className={`icon ${type}`} />;
+        return <Icons.TimesCircleOutline className={`icon ${type}`} />;
+    };
 
     return(
         <div className={`notificationContainer ${visible ? "show" : ""}`}>
             <div className={`notification ${type}`}>
-                <FontAwesomeIcon className={`icon ${type}`} icon={icon}/>
+                {renderIcon()}
                 <p>{message}</p>
             </div>
         </div>

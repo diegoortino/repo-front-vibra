@@ -1,6 +1,3 @@
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faShare, faTrash, faUser } from '@fortawesome/free-solid-svg-icons';
-import './Profile.css';
 import { useEffect, useState, useContext } from 'react';
 import { ProfileSkeleton } from './ProfileSkeleton';
 import { useParams } from "react-router-dom";
@@ -13,6 +10,7 @@ import { ConfigUserModal } from './configUserModal/configUserModal';
 import { FollowModal } from './followModal/FollowModal';
 import type { Song } from '../../types';
 import { NavLink } from 'react-router-dom';
+import { Icons } from '../Icons';
 
 interface User {
   profileImage: string;
@@ -275,7 +273,7 @@ export function Profile() {
               <img src={profile.profileImage} alt="Imagen Perfil" />
             ) : (
               <div className="defaultAvatar">
-                <FontAwesomeIcon icon={faUser} className="defaultIcon" />
+                <Icons.User className="defaultIcon" />
               </div>
             )}
           </div>
@@ -296,7 +294,7 @@ export function Profile() {
                 : "Seguir"}
             </button>
             <button className="actionBtn shareBtn" onClick={handleShare}>
-              <FontAwesomeIcon icon={faShare} />
+              <Icons.Share />
             </button>
           </div>
 
@@ -362,15 +360,15 @@ export function Profile() {
                           {isOwnProfile && (
                             <button
                               className="deleteButton"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeletePlaylist({
-                                  id: item.id,
-                                  name: item.song?.title,
-                                });
-                              }}
-                            >
-                              <FontAwesomeIcon icon={faTrash} />
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeletePlaylist({
+                                id: item.id,
+                                name: item.song?.title,
+                              });
+                            }}
+                          >
+                              <Icons.Trash />
                             </button>
                           )}
                         </div>

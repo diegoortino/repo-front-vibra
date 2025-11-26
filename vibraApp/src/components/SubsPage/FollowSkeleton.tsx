@@ -1,4 +1,3 @@
-import './FollowSkeleton.css';
 
 export function FollowSkeleton() {
   return (

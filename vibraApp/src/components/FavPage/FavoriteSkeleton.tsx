@@ -1,4 +1,3 @@
-import './FavoriteSkeleton.css'
 export function FavoriteSkeleton() {
   return (
     <div className="profileContainer">

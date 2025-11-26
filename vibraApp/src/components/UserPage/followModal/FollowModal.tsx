@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
-import './followModal.css'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUser } from '@fortawesome/free-solid-svg-icons';
+import { Icons } from '../../Icons';
 
 interface followModalProps{
     isOpen:boolean;
@@ -109,7 +107,7 @@ export function FollowModal({isOpen, onClose, type, targetUserId, currentUserId,
                                         {user.profileImage ? (
                                             <img src={user.profileImage} alt="foto perfil" />
                                         ) : (
-                                            <FontAwesomeIcon icon={faUser} />
+                                            <Icons.User />
                                         )}
                                     </div>
                                     <span className="follow-modal-username">{user.username}</span>

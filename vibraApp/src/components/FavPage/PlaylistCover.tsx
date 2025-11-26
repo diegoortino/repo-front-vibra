@@ -1,4 +1,3 @@
-import './PlaylistCover.css';
 
 interface Song {
   id: string;
