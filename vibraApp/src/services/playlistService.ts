@@ -187,7 +187,7 @@ export const playlistService = {
    * @returns Promise con playlists públicas
    */
   getPublicPlaylists: async (): Promise<Playlist[]> => {
-    return playlistService.getAllPlaylists({ isPublic: true });
+    return playlistService.getAllPlaylists({ userId: null });
   },
 
   /**
@@ -254,17 +254,19 @@ export const playlistService = {
    * @param name - Nombre de la playlist
    * @param songIds - Array de UUIDs de canciones
    * @param userId - ID del usuario (opcional)
+   * @param isPublic - Si la playlist es pública (opcional, por defecto false)
    * @returns Promise con la playlist creada
    */
   createPlaylistWithSongs: async (
     name: string,
     songIds: string[],
-    userId?: string
+    userId?: string,
+    isPublic?: boolean
   ): Promise<Playlist> => {
     // Paso 1: Crear la playlist vacía
     const createData: CreatePlaylistDto = {
       name,
-      isPublic: false
+      isPublic: isPublic ?? false
     };
 
     const url = userId ? `/playlists?userId=${userId}` : '/playlists';
@@ -281,20 +283,26 @@ export const playlistService = {
   },
 
   /**
-   * Actualizar playlist con nuevo nombre y canciones
+   * Actualizar playlist con nuevo nombre, privacidad y canciones
    *
    * @param id - UUID de la playlist
    * @param name - Nuevo nombre
    * @param songIds - Array de UUIDs de canciones
+   * @param isPublic - Si la playlist es pública (opcional)
    * @returns Promise con la playlist actualizada
    */
   updatePlaylistWithSongs: async (
     id: string,
     name: string,
-    songIds: string[]
+    songIds: string[],
+    isPublic?: boolean
   ): Promise<Playlist> => {
-    // Paso 1: Actualizar el nombre
-    await playlistService.updatePlaylist(id, { name });
+    // Paso 1: Actualizar el nombre y privacidad
+    const updateData: UpdatePlaylistDto = { name };
+    if (isPublic !== undefined) {
+      updateData.isPublic = isPublic;
+    }
+    await playlistService.updatePlaylist(id, updateData);
 
     // Paso 2: Reemplazar todas las canciones en UNA SOLA petición
     await playlistService.replaceSongs(id, songIds);

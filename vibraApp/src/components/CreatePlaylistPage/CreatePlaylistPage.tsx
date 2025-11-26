@@ -28,6 +28,8 @@ export function CreatePlaylistPage() {
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
   const [isGenreMenuOpen, setIsGenreMenuOpen] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isPublic, setIsPublic] = useState(false);
+  const [isPrivacyMenuOpen, setIsPrivacyMenuOpen] = useState(false);
 
   // Scroll al inicio cuando se monta el componente
   useEffect(() => {
@@ -39,6 +41,7 @@ export function CreatePlaylistPage() {
     if (editingPlaylist) {
       setPlaylistName(editingPlaylist.name);
       setSelectedSongs(editingPlaylist.songs || []);
+      setIsPublic(editingPlaylist.isPublic || false);
     }
   }, [editingPlaylist]);
 
@@ -94,7 +97,8 @@ export function CreatePlaylistPage() {
         action: editingPlaylist ? 'edit' : 'create',
         playlistName,
         selectedSongs: songsToSave,
-        editingPlaylistId: editingPlaylist?.id
+        editingPlaylistId: editingPlaylist?.id,
+        isPublic
       }
     });
   }, [playlistName, selectedSongs, editingPlaylist, navigate, showAlert]);
@@ -159,6 +163,36 @@ export function CreatePlaylistPage() {
         <div className="playlist-left-section">
           {/* Form Inputs */}
           <div className="form-section">
+            <div className="genre-section">
+              <button
+                className="genre-header"
+                onClick={() => setIsPrivacyMenuOpen(!isPrivacyMenuOpen)}
+              >
+                <h3 className="section-title">
+                  Privacidad de la playlist ({isPublic ? 'Pública' : 'Privada'})
+                </h3>
+                <span className={`genre-arrow ${isPrivacyMenuOpen ? 'open' : ''}`}>▼</span>
+              </button>
+
+              {isPrivacyMenuOpen && (
+                <div className="genres-container">
+                  <button
+                    type="button"
+                    className={`genre-btn ${isPublic ? 'active' : ''}`}
+                    onClick={() => setIsPublic(true)}
+                  >
+                    Pública
+                  </button>
+                  <button
+                    type="button"
+                    className={`genre-btn ${!isPublic ? 'active' : ''}`}
+                    onClick={() => setIsPublic(false)}
+                  >
+                    Privada
+                  </button>
+                </div>
+              )}
+            </div>
             <input
               type="text"
               className="playlist-name-input"
@@ -166,8 +200,7 @@ export function CreatePlaylistPage() {
               value={playlistName}
               onChange={(e) => setPlaylistName(e.target.value)}
               maxLength={30}
-            />
-
+            />            
             <input
               type="text"
               className="playlist-search-input"

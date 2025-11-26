@@ -321,7 +321,7 @@ export function Profile() {
             <div className="section">
               <div className='section-titles'>
                 <h3 className="sectionTitle">Historial</h3>
-                <NavLink to={`/user/${userId}/song-history`}> Ver más</NavLink>
+                <NavLink className={"seeMoreButton"} to={`/user/${userId}/song-history`}> Ver más</NavLink>
               </div>
               <div className="itemsGrid">
                 {userHistory.length === 0 ? (
@@ -376,17 +376,6 @@ export function Profile() {
                     );
                   })
                 )}
-              </div>
-            </div>
-
-            <div className="section">
-              <h3 className="sectionTitle">Imágenes</h3>
-              <div className="itemsGrid">
-                {[...Array(10)].map((_, index) => (
-                  <div key={index} className="item">
-                    <div className="itemCover">Portada</div>
-                  </div>
-                ))}
               </div>
             </div>
           </div>
