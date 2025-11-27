@@ -41,12 +41,6 @@ apiClient.interceptors.request.use(
     const url = config.url || 'unknown';
     console.log(`🚀 [API Request] ${method} ${url}`);
 
-    // Aquí podrías agregar token de autenticación en el futuro:
-    // const token = localStorage.getItem('authToken');
-    // if (token && config.headers) {
-    //   config.headers.Authorization = `Bearer ${token}`;
-    // }
-
     return config;
   },
   (error: AxiosError) => {

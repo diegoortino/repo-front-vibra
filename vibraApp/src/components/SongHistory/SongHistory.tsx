@@ -65,14 +65,12 @@ export function SongHistory() {
         setIsLoadingMore(true);
       }
 
+      const backendUrl = import.meta.env.VITE_BACKEND_BASE_URL || 'http://localhost:3000';
       const offset = pageNum * ITEMS_PER_PAGE;
       const resHistory = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/user-history/user/${userId}?limit=${ITEMS_PER_PAGE}&offset=${offset}`,
+        `${backendUrl}/user-history/user/${userId}?limit=${ITEMS_PER_PAGE}&offset=${offset}`,
         {
           credentials: 'include',
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
-          },
         }
       );
 
@@ -131,8 +129,9 @@ export function SongHistory() {
     setConfirmDelete(false);
 
     try {
+      const backendUrl = import.meta.env.VITE_BACKEND_BASE_URL || 'http://localhost:3000';
       showToast('Eliminando canción...', 'loading');
-      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/user-history/${userId}/${songToDelete.id}`, {
+      await fetch(`${backendUrl}/user-history/${userId}/${songToDelete.id}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
       });

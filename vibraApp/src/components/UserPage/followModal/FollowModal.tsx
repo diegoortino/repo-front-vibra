@@ -26,12 +26,10 @@ export function FollowModal({isOpen, onClose, type, targetUserId, currentUserId,
         setIsLoading(true);
         setError(null);
         try {
-            const endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/users/${targetUserId}/${type}`;
+            const backendUrl = import.meta.env.VITE_BACKEND_BASE_URL || 'http://localhost:3000';
+            const endpoint = `${backendUrl}/users/${targetUserId}/${type}`;
             const response = await fetch(endpoint, {
                 credentials: 'include',
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
-                },
             });
             if (!response.ok) throw new Error('Error fetching users');
             const data = await response.json();
@@ -52,16 +50,17 @@ export function FollowModal({isOpen, onClose, type, targetUserId, currentUserId,
 
     const handleFollowUser = async (userId: string, isCurrentlyFollowing: boolean) => {
         try {
+            const backendUrl = import.meta.env.VITE_BACKEND_BASE_URL || 'http://localhost:3000';
             const method = isCurrentlyFollowing ? "DELETE" : "POST";
             const endpoint = isCurrentlyFollowing
-                ? `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/users/${userId}/unfollow`
-                : `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/users/${userId}/follow`;
+                ? `${backendUrl}/users/${userId}/unfollow`
+                : `${backendUrl}/users/${userId}/follow`;
 
             const response = await fetch(endpoint, {
                 method,
+                credentials: 'include',
                 headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${localStorage.getItem("token")}`,
                 },
             });
 

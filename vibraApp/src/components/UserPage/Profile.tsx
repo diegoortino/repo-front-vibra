@@ -59,7 +59,8 @@ export function Profile() {
   // 🔁 Reutilizable: carga el historial
   const fetchHistory = async (userId: string) => {
     try {
-      const resHistory = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/user-history/user/${userId}/limited`);
+      const backendUrl = import.meta.env.VITE_BACKEND_BASE_URL || 'http://localhost:3000';
+      const resHistory = await fetch(`${backendUrl}/user-history/user/${userId}/limited`);
       if (!resHistory.ok) throw new Error('Error fetching user history');
       const historyData = await resHistory.json();
       const normalizedHistory = Array.isArray(historyData)
@@ -86,12 +87,10 @@ export function Profile() {
     setIsLoading(true);
 
     try {
+      const backendUrl = import.meta.env.VITE_BACKEND_BASE_URL || 'http://localhost:3000';
       // 1️⃣ Perfil
-      const resProfile = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/users/${userId}`, {
+      const resProfile = await fetch(`${backendUrl}/users/${userId}`, {
         credentials: 'include',
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
-        },
       });
 
       if (!resProfile.ok) throw new Error(`Error fetching user ${userId}`);
@@ -100,11 +99,8 @@ export function Profile() {
       setIsFollowing(profileData.isFollowing);
 
       // 2️⃣ Verificación de privacidad
-      const resPrivacy = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/users/${userId}/can-access-history`, {
+      const resPrivacy = await fetch(`${backendUrl}/users/${userId}/can-access-history`, {
         credentials: 'include',
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
-        },
       });
 
       const privacyData = await resPrivacy.json();
@@ -163,8 +159,9 @@ export function Profile() {
     setConfirmDelete(false);
 
     try {
+      const backendUrl = import.meta.env.VITE_BACKEND_BASE_URL || 'http://localhost:3000';
       showToast('Eliminando canción...', 'loading');
-      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/user-history/${userId}/${songToDelete.id}`, {
+      await fetch(`${backendUrl}/user-history/${userId}/${songToDelete.id}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
       });
@@ -224,17 +221,18 @@ export function Profile() {
 
   const handleFollow = async () => {
     try {
+      const backendUrl = import.meta.env.VITE_BACKEND_BASE_URL || 'http://localhost:3000';
       const targetUserId = profile!.id;
       const method = isFollowing ? "DELETE" : "POST";
       const endpoint = isFollowing
-        ? `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/users/${targetUserId}/unfollow`
-        : `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/users/${targetUserId}/follow`;
+        ? `${backendUrl}/users/${targetUserId}/unfollow`
+        : `${backendUrl}/users/${targetUserId}/follow`;
 
       const response = await fetch(endpoint, {
         method,
+        credentials: 'include',
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       });
 

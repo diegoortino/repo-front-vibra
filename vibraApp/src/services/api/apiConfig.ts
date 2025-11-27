@@ -11,7 +11,7 @@
  */
 export const API_CONFIG = {
   // URL base del backend (lee de .env o usa localhost:3000 por defecto)
-  BASE_URL: import.meta.env.VITE_API_URL || 'http://localhost:3000',
+  BASE_URL: import.meta.env.VITE_BACKEND_BASE_URL || 'http://localhost:3000',
 
   // Timeout para las peticiones HTTP (10 segundos)
   TIMEOUT: parseInt(import.meta.env.VITE_API_TIMEOUT || '10000'),
