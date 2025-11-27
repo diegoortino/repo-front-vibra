@@ -89,9 +89,6 @@ export function Profile() {
       // 1️⃣ Perfil
       const resProfile = await fetch(`http://localhost:3000/users/${userId}`, {
         credentials: 'include',
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
-        },
       });
 
       if (!resProfile.ok) throw new Error(`Error fetching user ${userId}`);
@@ -102,9 +99,6 @@ export function Profile() {
       // 2️⃣ Verificación de privacidad
       const resPrivacy = await fetch(`http://localhost:3000/users/${userId}/can-access-history`, {
         credentials: 'include',
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
-        },
       });
 
       const privacyData = await resPrivacy.json();
@@ -232,9 +226,9 @@ export function Profile() {
 
       const response = await fetch(endpoint, {
         method,
+        credentials: 'include',
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       });
 

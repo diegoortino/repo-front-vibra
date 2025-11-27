@@ -29,9 +29,6 @@ export function FollowModal({isOpen, onClose, type, targetUserId, currentUserId,
             const endpoint = `http://localhost:3000/users/${targetUserId}/${type}`;
             const response = await fetch(endpoint, {
                 credentials: 'include',
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
-                },
             });
             if (!response.ok) throw new Error('Error fetching users');
             const data = await response.json();
@@ -59,9 +56,9 @@ export function FollowModal({isOpen, onClose, type, targetUserId, currentUserId,
 
             const response = await fetch(endpoint, {
                 method,
+                credentials: 'include',
                 headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${localStorage.getItem("token")}`,
                 },
             });
 

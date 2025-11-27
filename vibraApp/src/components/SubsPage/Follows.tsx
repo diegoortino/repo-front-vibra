@@ -82,9 +82,6 @@ export function Follows(){
                 // Get followed users
                 const followingResponse = await fetch(`http://localhost:3000/users/${currentUser.id}/following`, {
                     credentials: 'include',
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
-                    },
                 });
 
                 if (followingResponse.ok) {

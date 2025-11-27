@@ -151,11 +151,10 @@ Backend realiza:
 { "token": "eyJhbGciOiJIUzI1NiIs..." }
 ```
 
-#### **5. Frontend guarda token y redirige**
+#### **5. Frontend redirige (cookie ya guardada)**
 ```typescript
 // Cookie ya guardada automáticamente por el browser
 const data = await response.json();
-localStorage.setItem("token_vibra", data.token); // Backup en localStorage
 
 // Redirigir a la aplicación principal
 window.location.href = "http://localhost:5174";

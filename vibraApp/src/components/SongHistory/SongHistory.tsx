@@ -70,9 +70,6 @@ export function SongHistory() {
         `http://localhost:3000/user-history/user/${userId}?limit=${ITEMS_PER_PAGE}&offset=${offset}`,
         {
           credentials: 'include',
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
-          },
         }
       );
 
