@@ -297,26 +297,27 @@ const generarMiniatura = (song: Song) =>
   );
 
   const playSong = useCallback(
-    async (song: Song, songsLista?: Song[]) => {
-      actualizarPlaylistConCancion(song, songsLista, true);
-      if (!user?.id) return;
+   async (song: Song, songsLista?: Song[]) => {
+     actualizarPlaylistConCancion(song, songsLista, true);
+     if (!user?.id) return;
 
-      try {
-        await fetch("http://localhost:3000/user-history", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            user: { id: user.id },
-            songId: song.id ?? undefined, // solo si existe en DB
-            youtubeId: song.youtubeId, // siempre presente
-          }),
-        });
-      } catch (err) {
-        console.error("Error al registrar canción en historial:", err);
-      }
-    },
-    [actualizarPlaylistConCancion, user]
-  );
+     try {
+       const backendUrl = import.meta.env.VITE_BACKEND_BASE_URL || 'http://localhost:3000';
+       await fetch(`${backendUrl}/user-history`, {
+         method: "POST",
+         headers: { "Content-Type": "application/json" },
+         body: JSON.stringify({
+           user: { id: user.id },
+           songId: song.id ?? undefined, // solo si existe en DB
+           youtubeId: song.youtubeId, // siempre presente
+         }),
+       });
+     } catch (err) {
+       console.error("Error al registrar canción en historial:", err);
+     }
+   },
+   [actualizarPlaylistConCancion, user]
+ );
 
   const setRandomSongs = useCallback((songs: Song[]) => {
     setRandomSongsState(songs.map(normalizarCancion));

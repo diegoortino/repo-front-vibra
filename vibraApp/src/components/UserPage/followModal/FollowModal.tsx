@@ -26,7 +26,8 @@ export function FollowModal({isOpen, onClose, type, targetUserId, currentUserId,
         setIsLoading(true);
         setError(null);
         try {
-            const endpoint = `http://localhost:3000/users/${targetUserId}/${type}`;
+            const backendUrl = import.meta.env.VITE_BACKEND_BASE_URL || 'http://localhost:3000';
+            const endpoint = `${backendUrl}/users/${targetUserId}/${type}`;
             const response = await fetch(endpoint, {
                 credentials: 'include',
             });
@@ -49,10 +50,11 @@ export function FollowModal({isOpen, onClose, type, targetUserId, currentUserId,
 
     const handleFollowUser = async (userId: string, isCurrentlyFollowing: boolean) => {
         try {
+            const backendUrl = import.meta.env.VITE_BACKEND_BASE_URL || 'http://localhost:3000';
             const method = isCurrentlyFollowing ? "DELETE" : "POST";
             const endpoint = isCurrentlyFollowing
-                ? `http://localhost:3000/users/${userId}/unfollow`
-                : `http://localhost:3000/users/${userId}/follow`;
+                ? `${backendUrl}/users/${userId}/unfollow`
+                : `${backendUrl}/users/${userId}/follow`;
 
             const response = await fetch(endpoint, {
                 method,

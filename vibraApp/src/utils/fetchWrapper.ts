@@ -11,7 +11,8 @@ window.fetch = async (input, init = {}) => {
       : input.url;
 
   // Solo aplicar el wrapper a peticiones locales (tu backend)
-  const esAPILocal = url.startsWith('http://localhost:3000/');
+  const backendUrl = import.meta.env.VITE_BACKEND_BASE_URL || 'http://localhost:3000';
+  const esAPILocal = url.startsWith(backendUrl);
 
   // Si NO es API local, usar fetch original sin modificar
   if (!esAPILocal) {

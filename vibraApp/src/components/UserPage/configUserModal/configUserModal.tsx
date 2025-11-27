@@ -39,7 +39,8 @@ export function ConfigUserModal({ isOpen, onClose, initialValues, onNotify,userI
     if (!hasChanges || !userId) return;
 
     try {
-        const res = await fetch(`http://localhost:3000/users/${userId}`, {
+        const backendUrl = import.meta.env.VITE_BACKEND_BASE_URL || 'http://localhost:3000';
+        const res = await fetch(`${backendUrl}/users/${userId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(changes),

@@ -34,7 +34,8 @@ export const UserProvider = ({ children }: UserProviderProps) => {
 
     const loadUser = async () => {
       try {
-        const resp = await fetch("http://localhost:3000/auth/me", {
+        const backendUrl = import.meta.env.VITE_BACKEND_BASE_URL || 'http://localhost:3000';
+        const resp = await fetch(`${backendUrl}/auth/me`, {
           method: "GET",
           credentials: "include",
           headers: { "Content-Type": "application/json" },

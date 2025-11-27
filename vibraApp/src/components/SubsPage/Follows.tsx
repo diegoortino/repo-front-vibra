@@ -80,7 +80,8 @@ export function Follows(){
                 setIsLoading(true);
 
                 // Get followed users
-                const followingResponse = await fetch(`http://localhost:3000/users/${currentUser.id}/following`, {
+                const backendUrl = import.meta.env.VITE_BACKEND_BASE_URL || 'http://localhost:3000';
+                const followingResponse = await fetch(`${backendUrl}/users/${currentUser.id}/following`, {
                     credentials: 'include',
                 });
 

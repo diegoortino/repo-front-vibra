@@ -2,7 +2,7 @@
  * Servicio de API centralizado con autenticación automática via cookies
  */
 
-const API_BASE_URL = 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL || 'http://localhost:3000';
 
 /**
  * Función helper para hacer peticiones con autenticación automática via cookies
