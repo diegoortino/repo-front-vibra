@@ -45,7 +45,7 @@ export function Home(){
                 </div>
                 <div className="features-visual">
                 <div className="visual-placeholder">
-                    <span className="placeholder-icon">🎵</span>
+                    <img src="/logoVibra.png" alt="Vibra Logo" className="placeholder-logo" />
                 </div>
                 </div>
             </div>

@@ -619,6 +619,19 @@ overflow: hidden;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 }
 
+/*
+ * ⚠️ IMPORTANTE: Contenedor de resultados de búsqueda
+ * Mismo ancho que suggestionsContainer para que las cards se vean iguales en toda la app
+ * NO CAMBIAR - esto ya se arregló 3 veces 😅
+ */
+.resultsContainer {
+  width: 90%;
+  max-width: 1400px;
+  margin-left: 60px;
+  padding: 20px 20px 40px;
+  color: white;
+}
+
 /* Grid de playlists - responsive con auto-fill */
 .playlistsGrid {
   display: grid;
@@ -4368,6 +4381,7 @@ overflow: hidden;
   }
 
   .suggestionsContainer,
+  .resultsContainer,
   .followsContainer,
   .create-playlist-page {
     margin-left: 0;
@@ -4376,6 +4390,10 @@ overflow: hidden;
 
   .suggestionsContainer {
     padding: 2.5rem 1.25rem 6rem;
+  }
+
+  .resultsContainer {
+    padding: 1rem 1.25rem 2rem;
   }
 
   .create-playlist-page {
@@ -4509,6 +4527,10 @@ overflow: hidden;
 
   .suggestionsContainer {
     padding: 2rem 1rem 6rem;
+  }
+
+  .resultsContainer {
+    padding: 1rem 1rem 2rem;
   }
 
   .suggestionsTitle {

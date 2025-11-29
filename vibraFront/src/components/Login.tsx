@@ -4,7 +4,7 @@ import { LoginModal } from '../modal/Login/LoginModal';
 import { RegisterModal } from '../modal/Register/RegisterModal';
 
 export function Login() {
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(true);
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
 
   const openLoginModal = () => {

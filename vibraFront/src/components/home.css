@@ -189,6 +189,13 @@
     z-index: 1;
 }
 
+.placeholder-logo {
+    max-width: 80%;
+    max-height: 80%;
+    object-fit: contain;
+    z-index: 1;
+}
+
 
 /* Responsive */
 @media (max-width: 768px) {

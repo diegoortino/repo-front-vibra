@@ -45,3 +45,69 @@
 .register-subtitle:hover{
     text-decoration: underline;
 }
+
+.register-error {
+    color: #ff6b6b;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    text-align: center;
+}
+
+/* Spinner */
+.spinner-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    background-color: #191022;
+    border: 2px rgba(127, 19, 236, 0.2) solid;
+    border-radius: 1rem;
+    padding: 3rem 4rem;
+}
+
+.spinner {
+    width: 60px;
+    height: 60px;
+    border: 4px solid rgba(127, 19, 236, 0.2);
+    border-top: 4px solid #7f13ec;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.spinner-text {
+    color: white;
+    font-size: 1.2rem;
+    font-weight: 500;
+}
+
+/* Password toggle */
+.password-input-container {
+    position: relative;
+    width: 100%;
+}
+
+.password-input-container .register-form-input {
+    width: 100%;
+    padding-right: 3rem;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 0.8rem;
+    top: calc(50% - 0.5rem);
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    padding: 0.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
