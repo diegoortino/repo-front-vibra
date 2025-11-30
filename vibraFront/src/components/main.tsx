@@ -4,6 +4,7 @@ import { Vibra } from "./Vibra";
 import How from "./How";
 import { Contact } from "./Contact";
 import { Login } from "./Login";
+import { ResetPassword } from "./ResetPassword";
 
 export function Main(){
 
@@ -14,6 +15,7 @@ export function Main(){
             <Route path="/how" element={<How/>}/>
             <Route path="contact" element={<Contact/>}/>
             <Route path="login" element={<Login/>}/>
+            <Route path="reset-password" element={<ResetPassword/>}/>
         </Routes>
     )
 }

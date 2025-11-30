@@ -174,3 +174,60 @@
   align-items: center;
   justify-content: center;
 }
+
+/* Forgot password */
+.forgot-password-btn {
+  background: none;
+  border: none;
+  color: #780090;
+  cursor: pointer;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+}
+
+.forgot-password-btn:hover {
+  text-decoration: underline;
+}
+
+.forgot-back-btn {
+  margin-top: 1rem;
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.forgot-back-btn:hover {
+  color: white;
+}
+
+.login-success-msg {
+  color: #4caf50;
+  font-size: 1rem;
+  margin: 1rem 0;
+  text-align: center;
+  padding: 0 1rem;
+}
+
+.login-subtitle-info {
+  color: #888;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Email highlight for verification step */
+.register-email-highlight {
+  color: #7f13ec;
+  font-weight: bold;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* Verification code input */
+.verification-code-input {
+  text-align: center;
+  font-size: 1.5rem;
+  letter-spacing: 0.5rem;
+  font-weight: bold;
+}

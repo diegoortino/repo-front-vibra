@@ -8,13 +8,18 @@ type Props = {
     onOpenLogin:()=>void;
 }
 
+type Step = 'register' | 'verify';
+
 export function RegisterModal({ isOpen, onClose,onOpenLogin }: Props) {
+    const [step, setStep] = useState<Step>('register');
     const [isLoading, setIsLoading] = useState(false);
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [verificationCode, setVerificationCode] = useState('');
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
     const [showPassword, setShowPassword] = useState(false);
 
     if (!isOpen) return null
@@ -36,7 +41,6 @@ export function RegisterModal({ isOpen, onClose,onOpenLogin }: Props) {
         }
 
         setIsLoading(true);
-        const startTime = Date.now();
 
         try {
             const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -55,16 +59,85 @@ export function RegisterModal({ isOpen, onClose,onOpenLogin }: Props) {
 
             const data = await response.json();
 
-            const elapsed = Date.now() - startTime;
-            const remaining = Math.max(0, 3000 - elapsed);
-
-            setTimeout(() => {
-                window.location.href = `https://vibra-app-ten.vercel.app/?token=${data.token}`;
-            }, remaining);
+            // Si requiere verificación, mostrar paso de verificación
+            if (data.requiresVerification) {
+                setStep('verify');
+                setSuccess('Te enviamos un código de 6 dígitos a tu email');
+            }
 
         } catch (err) {
             console.error('❌ Error en registro:', err);
             setError(err instanceof Error ? err.message : 'Error al registrarse');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Verificar código de email
+    const handleVerifyCode = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+        setSuccess('');
+
+        if (verificationCode.length !== 6) {
+            setError('El código debe tener 6 dígitos');
+            return;
+        }
+
+        setIsLoading(true);
+
+        try {
+            const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+            const response = await fetch(`${backendUrl}/auth/verify-email`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, code: verificationCode }),
+            });
+
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                throw new Error(data.message || 'Código incorrecto');
+            }
+
+            const data = await response.json();
+
+            // Verificación exitosa, redirigir a la app
+            setSuccess('Email verificado correctamente');
+            setTimeout(() => {
+                window.location.href = `https://vibra-app-ten.vercel.app/?token=${data.token}`;
+            }, 1500);
+
+        } catch (err) {
+            console.error('❌ Error en verificación:', err);
+            setError(err instanceof Error ? err.message : 'Error al verificar');
+            setIsLoading(false);
+        }
+    };
+
+    // Reenviar código
+    const handleResendCode = async () => {
+        setError('');
+        setSuccess('');
+        setIsLoading(true);
+
+        try {
+            const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+            const response = await fetch(`${backendUrl}/auth/resend-code`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email }),
+            });
+
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                throw new Error(data.message || 'Error al reenviar código');
+            }
+
+            setSuccess('Código reenviado. Revisa tu email.');
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Error al reenviar');
+        } finally {
             setIsLoading(false);
         }
     };
@@ -108,23 +181,69 @@ export function RegisterModal({ isOpen, onClose,onOpenLogin }: Props) {
         setIsLoading(false);
     };
 
+    const handleClose = () => {
+        setStep('register');
+        setError('');
+        setSuccess('');
+        setVerificationCode('');
+        onClose();
+    };
+
     // Mostrar spinner mientras carga
     if (isLoading) {
         return (
             <div className="overlay">
                 <div className="spinner-container">
                     <div className="spinner"></div>
-                    <p className="spinner-text">Creando cuenta...</p>
+                    <p className="spinner-text">
+                        {step === 'verify' ? 'Verificando...' : 'Creando cuenta...'}
+                    </p>
                 </div>
             </div>
         );
     }
+
+    // Paso de verificación
+    if (step === 'verify') {
+        return (
+            <div className="overlay" onClick={handleClose}>
+                <div className="modal-content" onClick={e=>e.stopPropagation()}>
+                    <span className="close" onClick={handleClose}>&times;</span>
+                    <h2 className='modal-title'>Verifica tu email</h2>
+                    <p className='register-subtitle'>Ingresa el código de 6 dígitos que enviamos a:</p>
+                    <p className='register-email-highlight'>{email}</p>
+                    {error && <p className='register-error'>{error}</p>}
+                    {success && <p className='register-success'>{success}</p>}
+                    <form className='register-form' onSubmit={handleVerifyCode}>
+                        <input
+                            className='register-form-input verification-code-input'
+                            type="text"
+                            placeholder='000000'
+                            value={verificationCode}
+                            onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                            maxLength={6}
+                            required
+                            autoFocus
+                        />
+                        <button className='register-form-submit' type="submit">Verificar</button>
+                    </form>
+                    <button className='resend-code-btn' onClick={handleResendCode}>
+                        ¿No recibiste el código? Reenviar
+                    </button>
+                    <button className='back-to-register-btn' onClick={() => setStep('register')}>
+                        Volver
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div className="overlay" onClick={onClose}>
+        <div className="overlay" onClick={handleClose}>
             <div className="modal-content" onClick={e=>e.stopPropagation()}>
-                <span className="close" onClick={onClose}>&times;</span>
+                <span className="close" onClick={handleClose}>&times;</span>
                 <h2 className='modal-title'>Crear cuenta</h2>
-                <a className='register-subtitle' href='#' onClick={()=>{onOpenLogin(); onClose();}}>Inicia sesión si ya tienes una cuenta</a>
+                <a className='register-subtitle' href='#' onClick={()=>{onOpenLogin(); handleClose();}}>Inicia sesión si ya tienes una cuenta</a>
                 {error && <p className='register-error'>{error}</p>}
                 <form className='register-form' onSubmit={handleEmailRegister}>
                     <input

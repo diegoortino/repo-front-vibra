@@ -111,3 +111,51 @@
     align-items: center;
     justify-content: center;
 }
+
+/* Verification step */
+.register-email-highlight {
+    color: #7f13ec;
+    font-weight: bold;
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.register-success {
+    color: #4caf50;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    text-align: center;
+}
+
+.verification-code-input {
+    text-align: center;
+    font-size: 1.5rem;
+    letter-spacing: 0.5rem;
+    font-weight: bold;
+}
+
+.resend-code-btn {
+    margin-top: 1rem;
+    background: none;
+    border: none;
+    color: #780090;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.resend-code-btn:hover {
+    text-decoration: underline;
+}
+
+.back-to-register-btn {
+    margin-top: 0.5rem;
+    background: none;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.back-to-register-btn:hover {
+    color: white;
+}
